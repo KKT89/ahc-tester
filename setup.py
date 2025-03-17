@@ -3,6 +3,8 @@ import os
 
 # スクリプトのあるディレクトリ
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+# 作業ディレクトリは1つ上のディレクトリにあると想定
+WORK_DIR = os.path.join(SCRIPT_DIR, "..")
 # `config.toml` を ahc-tester 内に作成
 CONFIG_FILE = os.path.join(SCRIPT_DIR, "config.toml")
 
@@ -15,9 +17,17 @@ if os.path.exists(CONFIG_FILE):
 
 # 設定ファイルの内容
 config = {
+    "script_dir": SCRIPT_DIR,  # スクリプトのあるディレクトリ
+    "work_dir": WORK_DIR,  # 作業ディレクトリ
+    "cpp_file": "main.cpp",  # メインのソースファイル
+    "exe_file": "solution",  # コンパイルしたプログラムの名前
+    "compile_options": "-O2",  # コンパイルオプション
+
+    "max_workers": 12,  # 最大並列実行数
+    "tester_output_score_txt": "Score =",  # テスターの出力からスコアを取得するための文字列
+
     "interactive": False,  # インタラクティブモードか
     "objective": "maximize",  # 最大化 or 最小化
-    "compile_options": "-O2 -march=native -std=gnu++20",  # コンパイルオプション
 }
 
 # `config.toml` を作成
