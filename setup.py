@@ -3,8 +3,8 @@ import os
 
 # スクリプトのあるディレクトリ
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# `config.toml` を ahc-tester の一個上のディレクトリに作成
-CONFIG_FILE = os.path.join(SCRIPT_DIR, "..", "config.toml")
+# `config.toml` を ahc-tester 内に作成
+CONFIG_FILE = os.path.join(SCRIPT_DIR, "config.toml")
 
 # 既存の設定ファイルがある場合、上書きするか確認
 if os.path.exists(CONFIG_FILE):
