@@ -20,10 +20,14 @@ config = {
     "script_dir": SCRIPT_DIR,  # スクリプトのあるディレクトリ
     "work_dir": WORK_DIR,  # 作業ディレクトリ
     "cpp_file": "main.cpp",  # メインのソースファイル
-    "exe_file": "solution",  # コンパイルしたプログラムの名前
+    "sol_file": "solution",  # コンパイルしたプログラムの名前
     "compile_options": "-O2",  # コンパイルオプション
 
-    "max_workers": 12,  # 最大並列実行数
+    "max_worker_count": 12,  # 並列実行するテストケースの数
+    "test_in_dir": "in",  # テストケースの入力ファイルがあるディレクトリ
+    "test_out_dir": "out",  # テストケースの出力ファイルを保存するディレクトリ
+    "gen_exe_file": "gen.exe",  # テストケース生成プログラムの名前
+    "vis_exe_file": "vis.exe",  # ビジュアライザの名前
     "tester_output_score_txt": "Score =",  # テスターの出力からスコアを取得するための文字列
 
     "interactive": False,  # インタラクティブモードか
