@@ -30,6 +30,7 @@ config = {
     "vis_exe_file": "vis.exe",  # ビジュアライザの名前
     "tester_output_score_txt": "Score =",  # テスターの出力からスコアを取得するための文字列
 
+    "pretest_count": 150,  # プレテストの数
     "interactive": False,  # インタラクティブモードか
     "objective": "maximize",  # 最大化 or 最小化
 }

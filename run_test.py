@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+import time
 import tomllib
 import concurrent.futures
 
@@ -43,53 +44,53 @@ def run_test_case(case_num, config):
     WORK_DIR = config["work_dir"]
 
     SOLUTION_EXE = os.path.join(WORK_DIR, config["sol_file"])
-    GEN_EXE = os.path.join(WORK_DIR, config["gen_exe_file"])
     VIS_EXE = os.path.join(WORK_DIR, config["vis_exe_file"])
 
     IN_DIR = os.path.join(WORK_DIR, config["test_in_dir"])
     OUT_DIR = os.path.join(WORK_DIR, config["test_out_dir"])
 
-    case_str = f"{case_num:04d}"
+    case_str = f"{case_num:05d}"
     input_path = os.path.join(IN_DIR, case_str + ".txt")
     output_path = os.path.join(OUT_DIR, case_str + ".txt")
-    
 
-    # # 出力ファイルをテストケースごとに分ける
-    # output_dir = "out"
-    # os.makedirs(output_dir, exist_ok=True)
+    # 出力ファイルをテストケースごとに分ける
+    output_dir = "out"
+    os.makedirs(output_dir, exist_ok=True)
 
-    # # 例: out/0000.txt, out/0001.txt, ...
-    # output_path = os.path.join(output_dir, case_str + ".txt")
+    start_time = time.perf_counter()  # 実行前の時刻を取得
 
-    # # 1) a.out の実行
-    # #    - それぞれ専用の out/xxxx.txt に書き込む
-    # subprocess.run(
-    #     ["./a.out"],
-    #     stdin=open(input_path, "r"),
-    #     stdout=open(output_path, "w"),  # 個別ファイルへ出力
-    #     stderr=subprocess.DEVNULL,  # stderrは不要なら破棄
-    #     text=True
-    # )
+    subprocess.run(
+        [SOLUTION_EXE],
+        stdin=open(input_path, "r"),
+        stdout=open(output_path, "w"),
+        stderr=subprocess.DEVNULL,  # stderrは不要なら破棄
+        text=True
+    )
 
-    # # 2) vis.exe の実行 (stdout から "Score = XXX" をパース)
-    # proc_vis = subprocess.run(
-    #     ["./vis.exe", input_path, output_path],
-    #     stdout=subprocess.PIPE,
-    #     text=True
-    # )
+    end_time = time.perf_counter()  # 実行後の時刻を取得
 
-    # score_vis = None
-    # for line in proc_vis.stdout.splitlines():
-    #     line = line.strip()
-    #     if line.startswith("Score ="):
-    #         score_vis = int(line.split("=")[1].strip())
-    #         break
+    elapsed_time = end_time - start_time  # 経過時間を計算
+    elapsed_time_ms = elapsed_time * 1000  # ミリ秒に変換
 
-    # # 戻り値: テストケース番号とスコア
-    # return {
-    #     "case": case_str,
-    #     "score_vis": score_vis
-    # }
+    # vis.exe の実行 (stdout から "Score = XXX" をパース)
+    proc_vis = subprocess.run(
+        [VIS_EXE, input_path, output_path],
+        stdout=subprocess.PIPE,
+        text=True
+    )
+
+    score = None
+    for line in proc_vis.stdout.splitlines():
+        line = line.strip()
+        if line.startswith("Score ="):
+            score = int(line.split("=")[1].strip())
+            break
+
+    return {
+        "case": case_str,
+        "score": score,
+        "elapsed_ms": elapsed_time_ms
+    }
 
 
 def run_test(config):
@@ -108,19 +109,22 @@ def run_test(config):
         for f in concurrent.futures.as_completed(futures):
             res = f.result()
             results.append(res)
-            print(f"Test case {res['case']} finished: score_vis = {res['score_vis']}")
+            print(f"seed:{res['case']}  score:{res['score']:,d}  ({res['elapsed_ms']:.2f} ms)")
 
     # 合計・平均などを表示
-    valid_results = [r for r in results if r["score_vis"] is not None]
+    valid_results = [r for r in results if r["score"] is not None]
     if not valid_results:
         print("No valid scores retrieved.")
         return
 
-    sum_vis = sum(r["score_vis"] for r in valid_results)
-    avg_vis = sum_vis / test_case_count
+    sum_score = sum(r["score"] for r in valid_results)
+    avg_score = sum_score / test_case_count
 
     print(f"----- All test cases finished (total {len(valid_results)}) -----")
-    print(f"[Visualizer] sum = {sum_vis}, average = {avg_vis:.2f}")
+    print(f"[Visualizer] sum score = {sum_score:,d}")
+    print(f"[Visualizer] average score = {avg_score:.2f}")
+    pretest_score = int(sum_score * config["pretest_count"] / test_case_count)
+    print(f"[Pretest] estimated score = {pretest_score:,d}")
 
 
 def main():
