@@ -21,7 +21,6 @@ config = {
     "work_dir": WORK_DIR,  # 作業ディレクトリ
     "cpp_file": "main.cpp",  # メインのソースファイル
     "sol_file": "solution",  # コンパイルしたプログラムの名前
-    "debug_file": "debug",  # デバッグ用のプログラムの名前
     "compile_options": "-O2",  # コンパイルオプション
 
     "max_worker_count": 16,  # 並列実行するテストケースの数
@@ -30,6 +29,9 @@ config = {
     "gen_exe_file": "gen.exe",  # テストケース生成プログラムの名前
     "vis_exe_file": "vis.exe",  # ビジュアライザの名前
     "tester_output_score_txt": "Score =",  # テスターの出力からスコアを取得するための文字列
+
+    "debug_file": "debug",  # デバッグ用のプログラムの名前
+    "param_file": "params.json",  # パラメータファイルの名前
 
     "pretest_count": 150,  # プレテストの数
     "interactive": False,  # インタラクティブモードか
