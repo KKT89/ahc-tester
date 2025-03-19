@@ -25,7 +25,7 @@ def main(config):
 
     args = parser.parse_args()
     WORK_DIR = config["work_dir"]
-    PARAM_FILE = os.path.join(WORK_DIR, config["param_file"])
+    PARAM_FILE = os.path.join(WORK_DIR, config["param_json_file"])
 
     # パラメータファイルを読み込む
     if os.path.exists(PARAM_FILE):

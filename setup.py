@@ -32,7 +32,8 @@ config = {
     "tester_output_score_txt": "Score =",  # テスターの出力からスコアを取得するための文字列
 
     "debug_file": "debug",  # デバッグ用のプログラムの名前
-    "param_file": "params.json",  # パラメータファイルの名前
+    "param_json_file": "params.json",  # パラメータファイルの名前
+    "param_cpp_file": "params.cpp",  # パラメータファイルの名前
 
     "pretest_count": 150,  # プレテストの数
     "interactive": False,  # インタラクティブモードか
