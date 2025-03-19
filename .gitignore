@@ -1,2 +1,3 @@
 *.toml
 *.txt
+__pycache__

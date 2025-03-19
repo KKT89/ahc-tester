@@ -1,24 +1,9 @@
 import os
 import subprocess
-import sys
 import time
-import tomllib
+import config as config_module
 import build
 import concurrent.futures
-
-def load_config():
-    # ./config.toml から設定を読み込む
-    CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.toml")
-
-    if not os.path.exists(CONFIG_FILE):
-        print(f"Error: {CONFIG_FILE} was not found. Please run setup.py first.")
-        sys.exit(1)
-
-    with open(CONFIG_FILE, "rb") as f:
-        config = tomllib.load(f)
-
-    return config
-
 
 def run_test_case(case_num, config):
     WORK_DIR = config["work_dir"]
@@ -109,7 +94,7 @@ def run_test(config):
 
 def main():
     # 設定を読み込む
-    config = load_config()
+    config = config_module.load_config()
     # コンパイル
     build.compile_program(config)
     # テスト実行

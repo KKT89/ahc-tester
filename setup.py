@@ -21,6 +21,7 @@ config = {
     "work_dir": WORK_DIR,  # 作業ディレクトリ
     "cpp_file": "main.cpp",  # メインのソースファイル
     "sol_file": "solution",  # コンパイルしたプログラムの名前
+    "combinined_file": "combined.cpp",  # 結合後のソースファイル
     "compile_options": "-O2",  # コンパイルオプション
 
     "max_worker_count": 16,  # 並列実行するテストケースの数

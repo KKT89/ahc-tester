@@ -1,18 +1,7 @@
 import os
 import subprocess
 import sys
-import tomllib
-
-def load_config():
-    # config.toml から設定を読み込む
-    CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.toml")
-    if not os.path.exists(CONFIG_FILE):
-        print(f"Error: {CONFIG_FILE} was not found. Please run setup.py first.")
-        sys.exit(1)
-    with open(CONFIG_FILE, "rb") as f:
-        config = tomllib.load(f)
-    return config
-
+import config as config_module
 
 def compile_program(config, debug=False):
     WORK_DIR = config["work_dir"]
@@ -44,5 +33,5 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] in ("-s", "--solve"):
         debug_mode = False
 
-    config = load_config()
+    config = config_module.load_config()
     compile_program(config, debug=debug_mode)

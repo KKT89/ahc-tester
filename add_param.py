@@ -1,20 +1,8 @@
 import os
 import sys
-import tomllib
 import argparse
 import json
-
-
-def load_config():
-    # config.toml から設定を読み込む
-    CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.toml")
-    if not os.path.exists(CONFIG_FILE):
-        print(f"Error: {CONFIG_FILE} was not found. Please run setup.py first.")
-        sys.exit(1)
-    with open(CONFIG_FILE, "rb") as f:
-        config = tomllib.load(f)
-    return config
-
+import config as config_module
 
 def main(config):
     parser = argparse.ArgumentParser(
@@ -93,5 +81,5 @@ def main(config):
 
 
 if __name__ == "__main__":
-    config = load_config()
+    config = config_module.load_config()
     main(config)
