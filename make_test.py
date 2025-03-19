@@ -2,6 +2,7 @@ import sys
 import os
 import config as config_module
 import subprocess
+import uuid
 
 def main():
     # 引数チェック
@@ -18,18 +19,20 @@ def main():
     # 設定を読み込む
     config = config_module.load_config()
 
+    # 一意の識別子を生成（UUIDを利用）
+    unique_id = uuid.uuid4().hex
+
     # 1) tmp.txt に L以上R未満の整数を出力
-    TMP_FILE = os.path.join(config["script_dir"], "tmp.txt")
+    TMP_FILE = os.path.join(config["script_dir"], f"tmp_{unique_id}.txt")
     with open(TMP_FILE, "w") as f:
         for x in range(L, R):
             f.write(f"{x}\n")
 
     # 2) gen.exe を実行して、一時ディレクトリにテストケースを生成
-    TMP_DIR = os.path.join(config["script_dir"], "tmp_dir")
+    TMP_DIR = os.path.join(config["script_dir"], f"tmp_dir_{unique_id}")
     os.makedirs(TMP_DIR, exist_ok=True)  # 一時ディレクトリを用意
     GEN_EXE = os.path.join(config['work_dir'], config["gen_exe_file"])
     cmd = [GEN_EXE, TMP_FILE, f"--dir={TMP_DIR}"]
-    print(f"Running: {' '.join(cmd)}")
     subprocess.run(cmd, check=True)
 
     # 3) 生成したテストケースをリネームして移動
