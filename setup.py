@@ -21,9 +21,10 @@ config = {
     "work_dir": WORK_DIR,  # 作業ディレクトリ
     "cpp_file": "main.cpp",  # メインのソースファイル
     "sol_file": "solution",  # コンパイルしたプログラムの名前
+    "debug_file": "debug",  # デバッグ用のプログラムの名前
     "compile_options": "-O2",  # コンパイルオプション
 
-    "max_worker_count": 12,  # 並列実行するテストケースの数
+    "max_worker_count": 16,  # 並列実行するテストケースの数
     "test_in_dir": "in",  # テストケースの入力ファイルがあるディレクトリ
     "test_out_dir": "out",  # テストケースの出力ファイルを保存するディレクトリ
     "gen_exe_file": "gen.exe",  # テストケース生成プログラムの名前

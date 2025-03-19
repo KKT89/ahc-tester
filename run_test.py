@@ -3,6 +3,7 @@ import subprocess
 import sys
 import time
 import tomllib
+import build
 import concurrent.futures
 
 def load_config():
@@ -17,27 +18,6 @@ def load_config():
         config = tomllib.load(f)
 
     return config
-
-
-def compile_program(config):
-    WORK_DIR = config["work_dir"]
-    CPP_FILE_PATH = os.path.join(WORK_DIR, config["cpp_file"])
-    SOL_FILE_PATH = os.path.join(WORK_DIR, config["sol_file"])
-    COMPILE_OPTIONS = config["compile_options"]
-
-    cmd = ["g++", CPP_FILE_PATH, COMPILE_OPTIONS, "-o", SOL_FILE_PATH]
-    print(f"Building: {config['cpp_file']} -> {config['sol_file']}")
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-
-    if result.returncode != 0:
-        # ビルド失敗
-        print("Build failed.")
-        print("stdout:", result.stdout)
-        print("stderr:", result.stderr)
-        sys.exit(1)
-    else:
-        print("Build succeeded.")
 
 
 def run_test_case(case_num, config):
@@ -131,7 +111,7 @@ def main():
     # 設定を読み込む
     config = load_config()
     # コンパイル
-    compile_program(config)
+    build.compile_program(config)
     # テスト実行
     run_test(config)
 
