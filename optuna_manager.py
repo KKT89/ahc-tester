@@ -8,8 +8,10 @@ import numpy as np
 import optuna
 import config as config_module
 import build
+import uuid
 import warnings
 from optuna.exceptions import ExperimentalWarning
+
 warnings.filterwarnings("ignore", category=ExperimentalWarning)
 
 
@@ -37,11 +39,12 @@ def run_test(test_number, params, study_dir, config):
     VIS_EXE = os.path.join(WORK_DIR, config["vis_exe_file"])
 
     IN_DIR = os.path.join(WORK_DIR, config["test_in_dir"])
-    OUT_DIR = os.path.join(WORK_DIR, config["test_out_dir"])
 
     case_str = f"{test_number:05d}"
     input_path = os.path.join(IN_DIR, case_str + ".txt")
-    output_path = os.path.join(OUT_DIR, case_str + ".txt")
+    uid = uuid.uuid4().hex[:8]
+    temp_output_filename = f"{case_str}_{uid}.txt"
+    output_path = os.path.join(study_dir, temp_output_filename)
 
     cmd_cpp = [SOLUTION_EXE] + [str(item) for pair in params.items() for item in pair]
     subprocess.run(
@@ -57,6 +60,9 @@ def run_test(test_number, params, study_dir, config):
         stdout=subprocess.PIPE,
         text=True
     )
+
+    if os.path.exists(output_path):
+        os.remove(output_path)
 
     score = None
     for line in proc_vis.stdout.splitlines():
@@ -83,7 +89,8 @@ def objective(trial, study_dir, config):
         results.append(score)
         trial.report(score, step=int(instance_id))
         if trial.should_prune():
-            print(f"Trial pruned at instance {instance_id:04d} with intermediate avg score {sum(results)/len(results):.2f}")
+            print(
+                f"Trial pruned at instance {instance_id:04d} with intermediate avg score {sum(results) / len(results):.2f}")
             return sum(results) / len(results)
     avg_score = sum(results) / len(results)
     print(f"Trial finished. Params={params}, avg_score={avg_score:.2f}")
@@ -104,7 +111,7 @@ def main():
         os.makedirs(OPTUNA_WORK_DIR, exist_ok=True)
 
     if args.dir:
-        study_dir = os.path.join(OPTUNA_WORK_DIR, args.dir)
+        study_dir = args.dir
     else:
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         study_dir = os.path.join(OPTUNA_WORK_DIR, f"study_{timestamp}")
@@ -133,7 +140,7 @@ def main():
     )
 
     max_worker_count = config["max_worker_count"]
-    study.optimize(lambda trial: objective(trial, study_dir, config), n_trials=50, n_jobs=max_worker_count)
+    study.optimize(lambda trial: objective(trial, study_dir, config), n_trials=100, n_jobs=max_worker_count)
 
     print("Best params:", study.best_params)
     print("Best score:", study.best_value)
