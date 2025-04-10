@@ -17,6 +17,6 @@ Pythonにわかなので全てを間違えている自信があります。~~(�
 
 以下のコマンド群は、全てルートディレクトリで実行することを想定しています。この設計の時点であまり良くないんだろうなという気はしています。
 ```
-$ uv init
+$ uv venv .venv
 $ uv pip install -r ahc-tester/requirements.txt
 ```
