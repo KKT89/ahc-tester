@@ -4,6 +4,8 @@ import config as config_module
 import subprocess
 import uuid
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 def main_with_params(L: int, R: int):
     if L > R:
         print("L must be less than or equal to R.")
@@ -12,18 +14,19 @@ def main_with_params(L: int, R: int):
     config = config_module.load_config()
     unique_id = uuid.uuid4().hex
 
-    TMP_FILE = os.path.join(config["script_dir"], f"tmp_{unique_id}.txt")
+    WORK_DIR = os.path.join(SCRIPT_DIR, config["paths"]["relative_work_dir"])
+    TMP_FILE = os.path.join(SCRIPT_DIR, f"tmp_{unique_id}.txt")
     with open(TMP_FILE, "w") as f:
         for x in range(L, R):
             f.write(f"{x}\n")
 
-    TMP_DIR = os.path.join(config["script_dir"], f"tmp_dir_{unique_id}")
+    TMP_DIR = os.path.join(SCRIPT_DIR, f"tmp_dir_{unique_id}")
     os.makedirs(TMP_DIR, exist_ok=True)
-    GEN_EXE = os.path.join(config['work_dir'], config["gen_exe_file"])
+    GEN_EXE = os.path.join(WORK_DIR, config["gen_exe_file"])
     cmd = [GEN_EXE, TMP_FILE, f"--dir={TMP_DIR}"]
     subprocess.run(cmd, check=True)
 
-    IN_DIR = os.path.join(config["work_dir"], config["test_in_dir"])
+    IN_DIR = os.path.join(WORK_DIR, config["test_in_dir"])
     os.makedirs(IN_DIR, exist_ok=True)
     total_cases = R - L
     for i in range(total_cases):

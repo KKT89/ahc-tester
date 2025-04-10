@@ -1,11 +1,7 @@
 import toml
 import os
 
-# スクリプトのあるディレクトリ
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# 作業ディレクトリは1つ上のディレクトリにあると想定
-WORK_DIR = os.path.join(SCRIPT_DIR, "..")
-# `config.toml` を ahc-tester 内に作成
 CONFIG_FILE = os.path.join(SCRIPT_DIR, "config.toml")
 
 # 既存の設定ファイルがある場合、上書きするか確認
@@ -17,8 +13,9 @@ if os.path.exists(CONFIG_FILE):
 
 # 設定ファイルの内容
 config = {
-    "script_dir": SCRIPT_DIR,  # スクリプトのあるディレクトリ
-    "work_dir": WORK_DIR,  # 作業ディレクトリ
+    "paths": {
+        "relative_work_dir": "../",  # 作業ディレクトリの相対パス
+    },
     "cpp_file": "main.cpp",  # メインのソースファイル
     "sol_file": "solution",  # コンパイルしたプログラムの名前
     "combinined_file": "combined.cpp",  # 結合後のソースファイル
