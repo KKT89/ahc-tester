@@ -28,3 +28,8 @@ TODO：objective(最大/最小)と、インタラクティブの有無は現在�
 ```
 $ uv run ahc-tester/setup.py
 ```
+
+### ビルド
+```
+$ uv run ahc-tester/build.py
+```
