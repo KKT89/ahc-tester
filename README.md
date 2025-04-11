@@ -22,7 +22,7 @@ $ uv pip install -r ahc-tester/requirements.txt
 ```
 
 ### セットアップ
-設定ファイル(config.toml)と、公式ローカルテストツールのビルドを実行します。
+設定ファイル(config.toml)の作成と、公式ローカルテストツールのビルドを実行します。
 
 TODO：objective(最大/最小)と、インタラクティブの有無は現在手動でコード書き換える必要があります。
 ```
