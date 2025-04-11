@@ -8,73 +8,102 @@ CONFIG_FILE = os.path.join(SCRIPT_DIR, CONFIG_FILE_NAME)
 
 config = {
     "paths": {
-        "relative_work_dir": "../",  # 作業ディレクトリの相対パス
-        "tools_dir": "tools",  # ツールのディレクトリ
+        "relative_work_dir": "../", # 作業ディレクトリの相対パス
+        "tools_dir": "tools",       # ツールのディレクトリ
     },
     "files": {
-        "config_file": CONFIG_FILE_NAME,  # 設定ファイルの名前
-        "cpp_file": "main.cpp",        # メインのソースファイル
-        "combinined_file": "combined.cpp",  # 結合後のソースファイル
-        "sol_file": "solution",        # コンパイルしたプログラムの名前
-        "gen_file": "gen",             # テストケース生成プログラムの名前
-        "vis_file": "vis",             # ビジュアライズプログラムの名前
-        "tester_file": "tester",       # テスタープログラムの名前
+        "config_file": CONFIG_FILE_NAME,   # 設定ファイルの名前
+        "cpp_file": "main.cpp",            # メインのソースファイル
+        "combinined_file": "combined.cpp", # 結合後のソースファイル
+        "sol_file": "solution",            # コンパイルしたプログラムの名前
+        "gen_file": "gen",                 # テストケース生成プログラムの名前
+        "vis_file": "vis",                 # ビジュアライズプログラムの名前
+        "tester_file": "tester",           # テスタープログラムの名前
     },
     "build": {
-        "compile_options": "-O2",  # コンパイルオプション
+        "compile_options": "-O2", # コンパイルオプション
     },
     "test": {
-        "test_in_dir": "in",    # テストケースの入力ファイルがあるディレクトリ
-        "test_out_dir": "out",  # テストケースの出力ファイルを保存するディレクトリ
-        "tester_output_score_txt": "Score =",  # テスターの出力からスコアを取得するための文字列
+        "test_in_dir": "in",                  # テストケースの入力ファイルがあるディレクトリ
+        "test_out_dir": "out",                # テストケースの出力ファイルを保存するディレクトリ
+        "tester_output_score_txt": "Score =", # テスターの出力からスコアを取得するための文字列
     },
     "parameters": {
-        "param_json_file": "params.json",  # パラメータファイルの名前
-        "param_cpp_file": "params.cpp",      # パラメータファイルの名前
+        "param_json_file": "params.json", # パラメータファイルの名前
+        "param_cpp_file": "params.cpp",   # パラメータファイルの名前
     },
     "optuna": {
-        "work_dir": "optuna_work",      # Optuna 用の作業ディレクトリ
-        "db_name": "optuna_study.db",   # Optuna 用のデータベースファイル
+        "work_dir": "optuna_work",    # Optuna 用の作業ディレクトリ
+        "db_name": "optuna_study.db", # Optuna 用のデータベースファイル
     },
     "problem": {
-        "pretest_count": 150,  # プレテストの数
-        "interactive": False,  # インタラクティブモードかどうか
-        "objective": "maximize",  # 最大化 or 最小化
+        "pretest_count": 150,    # プレテストの数
+        "interactive": False,    # インタラクティブモードかどうか
+        "objective": "maximize", # 最大化 or 最小化
     },
-    "max_worker_count": 12,  # 並列実行するテストケースの数
+    "max_worker_count": 12, # 並列実行するテストケースの数
 }
 
 
 def create_config_file(config, config_path):
     with open(config_path, "w") as f:
         toml.dump(config, f)
-    print(f"{config_path} has been overwritten successfully!")
+    print(f"{config_path} has been overwritten successfully!\n")
 
 
-def build_cargo():
+def build_tools_with_cargo():
     relative_work_dir = config["paths"]["relative_work_dir"]
     work_dir = os.path.abspath(os.path.join(SCRIPT_DIR, relative_work_dir))
     tools_dir = config["paths"]["tools_dir"]
     tools_path = os.path.join(work_dir, tools_dir)
+    cargo_manifest_path = os.path.join(tools_path, "Cargo.toml")
 
-    cargo_manifest_path = os.path.join(tools_path, "Cargo.toml")    
-    cmd = [
-        "cargo",
-        "build",
-        "--manifest-path", cargo_manifest_path,
-        "-r",
-        "--bin", config["files"]["gen_file"]
-    ]
-    print("Running Cargo build command ...")
+    # cargo_mainfest_path が存在しない場合はエラー
+    if not os.path.exists(cargo_manifest_path):
+        print(f"Error: {cargo_manifest_path} does not exist.")
+        return
     
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=work_dir)
+    # 最新のコンパイラに更新
+    update_cmd = ["rustup", "update"]
+    print("Running rustup update ...")
+    update_result = subprocess.run(update_cmd, capture_output=True, text=True, cwd=work_dir)
     
-    if result.returncode == 0:
-        print("Cargo build succeeded.")
-        print(result.stdout)
+    if update_result.returncode == 0:
+        print("rustup update succeeded.\n")
     else:
-        print("Cargo build failed.")
-        print(result.stderr)
+        print("rustup update failed.")
+        print(update_result.stderr)
+        return
+    
+    # 各種ツールをビルド
+    binary_list = [config["files"]["gen_file"], config["files"]["vis_file"]]
+    if config["problem"]["interactive"]:
+        binary_list.append(config["files"]["tester_file"])
+        
+    # 各バイナリについて cargo build を実行する
+    for binary in binary_list:
+        cmd = [
+            "cargo",
+            "build",
+            "--manifest-path", cargo_manifest_path,
+            "-r",
+            "--bin", binary
+        ]
+        print(f"Running Cargo build command for {binary} ...")
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=work_dir)
+    
+        if result.returncode == 0:
+            print(f"Cargo build succeeded for {binary}.")
+            # ビルドしたバイナリを work_dir にコピー
+            binary_path = os.path.join(tools_path, "target", "release", binary)
+            dest_path = os.path.join(work_dir, binary)
+            if os.path.exists(dest_path):
+                os.remove(dest_path)
+            os.rename(binary_path, dest_path)
+            print(f"Copied {binary} to {work_dir}\n")
+        else:
+            print(f"Cargo build failed for {binary}.")
+            print(result.stderr)
 
 
 def main():
@@ -86,7 +115,8 @@ def main():
     else:
         create_config_file(config, CONFIG_FILE)
 
-    build_cargo()
+    # Cargo を使ってツールをビルド
+    build_tools_with_cargo()
     
 
 if __name__ == "__main__":
