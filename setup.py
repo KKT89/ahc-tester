@@ -1,6 +1,6 @@
 import os
-import toml
 import subprocess
+import toml
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE_NAME = "config.toml"
@@ -51,6 +51,15 @@ def create_config_file(config, config_path):
     print(f"{config_path} has been overwritten successfully!\n")
 
 
+def load_config():
+    # ./config.toml から設定を読み込む
+    if not os.path.exists(CONFIG_FILE):
+        print(f"Error: {CONFIG_FILE} was not found. Please run setup.py first.")
+        return None
+    with open(CONFIG_FILE, "r") as f:
+        return toml.load(f)
+
+
 def build_tools_with_cargo():
     relative_work_dir = config["paths"]["relative_work_dir"]
     work_dir = os.path.abspath(os.path.join(SCRIPT_DIR, relative_work_dir))
@@ -61,7 +70,7 @@ def build_tools_with_cargo():
     # cargo_mainfest_path が存在しない場合はエラー
     if not os.path.exists(cargo_manifest_path):
         print(f"Error: {cargo_manifest_path} does not exist.")
-        return
+        exit(1)
     
     # 最新のコンパイラに更新
     update_cmd = ["rustup", "update"]
@@ -73,7 +82,7 @@ def build_tools_with_cargo():
     else:
         print("rustup update failed.")
         print(update_result.stderr)
-        return
+        exit(1)
     
     # 各種ツールをビルド
     binary_list = [config["files"]["gen_file"], config["files"]["vis_file"]]

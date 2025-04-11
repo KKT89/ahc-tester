@@ -1,37 +1,33 @@
 import os
+import setup
 import subprocess
 import sys
-import config as config_module
 
-def compile_program(config, debug=False):
-    WORK_DIR = config["work_dir"]
-    CPP_FILE_PATH = os.path.join(WORK_DIR, config["cpp_file"])
-    SOL_FILE_PATH = os.path.join(WORK_DIR, config["sol_file"])
-    COMPILE_OPTIONS = config["compile_options"]
-    if debug:
-        SOL_FILE_PATH = os.path.join(WORK_DIR, config["debug_file"])
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-    cmd = ["g++", CPP_FILE_PATH, COMPILE_OPTIONS, "-o", SOL_FILE_PATH]
-    if debug:
-        print(f"Building: {config['cpp_file']} -> {config['debug_file']}")
-    else:
-        print(f"Building: {config['cpp_file']} -> {config['sol_file']}")
+def compile_program(config):
+    relative_work_dir = config["paths"]["relative_work_dir"]
+    work_dir = os.path.abspath(os.path.join(SCRIPT_DIR, relative_work_dir))
+    
+    cpp_file_path = os.path.join(work_dir, config["files"]["cpp_file"])
+    sol_file_path = os.path.join(work_dir, config["files"]["sol_file"])
+    if not os.path.exists(cpp_file_path):
+        print(f"Error: {cpp_file_path} was not found.")
+        sys.exit(1)
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    COMPILE_OPTIONS = config["build"]["compile_options"]
+    cmd = ["g++", cpp_file_path, COMPILE_OPTIONS, "-o", sol_file_path]
+    print(f"Building: {config["files"]["cpp_file"]} -> {config["files"]['sol_file']}")
+
+    result = subprocess.run(cmd, capture_output=True, text=True, cwd=work_dir)
     if result.returncode != 0:
         print("Build failed.")
-        print("stdout:", result.stdout)
-        print("stderr:", result.stderr)
+        print(result.stderr)
         sys.exit(1)
     else:
         print("Build succeeded.")
 
 
 if __name__ == "__main__":
-    # コマンドライン引数をチェックしてデバッグモードかどうか判定
-    debug_mode = True
-    if len(sys.argv) > 1 and sys.argv[1] in ("-s", "--solve"):
-        debug_mode = False
-
-    config = config_module.load_config()
-    compile_program(config, debug=debug_mode)
+    config = setup.load_config()
+    compile_program(config)
