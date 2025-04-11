@@ -1,6 +1,6 @@
+import setup
 import sys
 import os
-import config as config_module
 import subprocess
 import uuid
 
@@ -11,33 +11,34 @@ def main_with_params(L: int, R: int):
         print("L must be less than or equal to R.")
         sys.exit(1)
 
-    config = config_module.load_config()
-    unique_id = uuid.uuid4().hex
+    config = setup.load_config()
+    relative_work_dir = config["paths"]["relative_work_dir"]
+    work_dir = os.path.abspath(os.path.join(SCRIPT_DIR, relative_work_dir))
 
-    WORK_DIR = os.path.join(SCRIPT_DIR, config["paths"]["relative_work_dir"])
-    TMP_FILE = os.path.join(SCRIPT_DIR, f"tmp_{unique_id}.txt")
-    with open(TMP_FILE, "w") as f:
+    unique_id = uuid.uuid4().hex
+    tmp_dir = os.path.join(SCRIPT_DIR, f"tmp_dir_{unique_id}")
+    os.makedirs(tmp_dir, exist_ok=True)
+    tmp_file = os.path.join(SCRIPT_DIR, f"tmp_{unique_id}.txt")
+    with open(tmp_file, "w") as f:
         for x in range(L, R):
             f.write(f"{x}\n")
 
-    TMP_DIR = os.path.join(SCRIPT_DIR, f"tmp_dir_{unique_id}")
-    os.makedirs(TMP_DIR, exist_ok=True)
-    GEN_EXE = os.path.join(WORK_DIR, config["gen_exe_file"])
-    cmd = [GEN_EXE, TMP_FILE, f"--dir={TMP_DIR}"]
-    subprocess.run(cmd, check=True)
+    gen = os.path.join(work_dir, config["files"]["gen_file"])
+    cmd = [gen, tmp_file, f"--dir={tmp_dir}"]
+    subprocess.run(cmd, check=True, cwd=SCRIPT_DIR)
 
-    IN_DIR = os.path.join(WORK_DIR, config["test_in_dir"])
-    os.makedirs(IN_DIR, exist_ok=True)
+    in_dir = os.path.join(work_dir, config["test"]["input_dir"])
+    os.makedirs(in_dir, exist_ok=True)
     total_cases = R - L
     for i in range(total_cases):
-        src_path = os.path.join(TMP_DIR, f"{i:04d}.txt")
-        new_file_name = f"{L + i:05d}.txt"
-        dst_path = os.path.join(IN_DIR, new_file_name)
+        src_path = os.path.join(tmp_dir, f"{i:04d}.txt")
+        new_file_name = f"{L + i:04d}.txt"
+        dst_path = os.path.join(in_dir, new_file_name)
         if os.path.exists(src_path):
             os.rename(src_path, dst_path)
 
-    os.remove(TMP_FILE)
-    os.rmdir(TMP_DIR)
+    os.remove(tmp_file)
+    os.rmdir(tmp_dir)
 
 def main():
     if len(sys.argv) < 3:

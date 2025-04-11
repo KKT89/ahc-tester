@@ -24,8 +24,8 @@ config = {
         "compile_options": "-O2", # コンパイルオプション
     },
     "test": {
-        "test_in_dir": "in",                  # テストケースの入力ファイルがあるディレクトリ
-        "test_out_dir": "out",                # テストケースの出力ファイルを保存するディレクトリ
+        "input_dir": "in",                    # テストケースの入力ファイルがあるディレクトリ
+        "output_dir": "out",                  # テストケースの出力ファイルを保存するディレクトリ
         "tester_output_score_txt": "Score =", # テスターの出力からスコアを取得するための文字列
     },
     "parameters": {
