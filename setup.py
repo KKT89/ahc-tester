@@ -14,7 +14,7 @@ config = {
     "files": {
         "config_file": CONFIG_FILE_NAME,   # 設定ファイルの名前
         "cpp_file": "main.cpp",            # メインのソースファイル
-        "combinined_file": "combined.cpp", # 結合後のソースファイル
+        "combined_file": "combined.cpp", # 結合後のソースファイル
         "sol_file": "solution",            # コンパイルしたプログラムの名前
         "gen_file": "gen",                 # テストケース生成プログラムの名前
         "vis_file": "vis",                 # ビジュアライズプログラムの名前

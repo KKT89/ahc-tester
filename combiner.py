@@ -1,7 +1,9 @@
 import os
 import sys
 import re
-import config as config_module
+import setup
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def read_file_content(file_name: str) -> str:
     with open(file_name, "r") as f:
@@ -34,16 +36,17 @@ def make_converted_file_content(
 
 
 def main():
-    config = config_module.load_config()
+    config = setup.load_config()
 
-    WORK_DIR = config["work_dir"]
-    CPP_FILE_PATH = os.path.join(WORK_DIR, config["cpp_file"])
-    COMBINED_FILE_PATH = os.path.join(WORK_DIR, config["combinined_file"])
-    
-    converted_content = make_converted_file_content(CPP_FILE_PATH, [CPP_FILE_PATH], set())
-    with open(COMBINED_FILE_PATH, "w") as f:
+    relative_work_dir = config["paths"]["relative_work_dir"]
+    work_dir = os.path.abspath(os.path.join(SCRIPT_DIR, relative_work_dir))
+    cpp_file_path = os.path.join(work_dir, config["files"]["cpp_file"])
+    combined_file_path = os.path.join(work_dir, config["files"]["combined_file"])
+
+    converted_content = make_converted_file_content(cpp_file_path, [cpp_file_path], set())
+    with open(combined_file_path, "w") as f:
         f.write(converted_content)
-    print(f"Combined file generated: {COMBINED_FILE_PATH}")
+    print(f"Combined file generated: {combined_file_path}")
 
 
 if __name__ == "__main__":
