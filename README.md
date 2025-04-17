@@ -30,7 +30,7 @@ $ uv run ahc-tester/setup.py
 ```
 
 ### テストケース作成
-以下のコマンドで、L 以上 R 未満のseed値のテストケースを作成します。
+以下のコマンドで、L 以上 R 未満のシード値のテストケースを作成します。
 
 ```
 $ uv run ahc-tester/make_test.py L R
