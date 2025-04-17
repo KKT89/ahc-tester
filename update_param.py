@@ -30,7 +30,7 @@ def make_cpp(param_cpp_file):
         lines.append(f'    double {name} = {v};')
 
     lines += [
-        '};',
+        '} Params;',
         '',
         'void updateParams(int argc, char* argv[]) {',
         '    for (int i = 1; i < argc; i += 2) {',
