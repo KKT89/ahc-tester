@@ -1,11 +1,11 @@
 import os
+import make_param
 import setup
 import subprocess
 import sys
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-
 def compile_program(config):
+    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
     relative_work_dir = config["paths"]["relative_work_dir"]
     work_dir = os.path.abspath(os.path.join(SCRIPT_DIR, relative_work_dir))
     
@@ -30,4 +30,5 @@ def compile_program(config):
 
 if __name__ == "__main__":
     config = setup.load_config()
+    make_param.main()
     compile_program(config)

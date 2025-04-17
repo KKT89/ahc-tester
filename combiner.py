@@ -3,12 +3,9 @@ import sys
 import re
 import setup
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-
 def read_file_content(file_name: str) -> str:
     with open(file_name, "r") as f:
         return f.read()
-
 
 def make_converted_file_content(
         file_name: str,
@@ -38,6 +35,7 @@ def make_converted_file_content(
 def main():
     config = setup.load_config()
 
+    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
     relative_work_dir = config["paths"]["relative_work_dir"]
     work_dir = os.path.abspath(os.path.join(SCRIPT_DIR, relative_work_dir))
     cpp_file_path = os.path.join(work_dir, config["files"]["cpp_file"])

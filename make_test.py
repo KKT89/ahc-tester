@@ -4,14 +4,13 @@ import os
 import subprocess
 import uuid
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-
 def main_with_params(L: int, R: int):
     if L > R:
         print("L must be less than or equal to R.")
         sys.exit(1)
 
     config = setup.load_config()
+    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
     relative_work_dir = config["paths"]["relative_work_dir"]
     work_dir = os.path.abspath(os.path.join(SCRIPT_DIR, relative_work_dir))
 
@@ -40,6 +39,7 @@ def main_with_params(L: int, R: int):
     os.remove(tmp_file)
     os.rmdir(tmp_dir)
 
+
 def main():
     if len(sys.argv) < 3:
         print("Usage: python make_test.py <L> <R>")
@@ -47,6 +47,7 @@ def main():
     L = int(sys.argv[1])
     R = int(sys.argv[2])
     main_with_params(L, R)
+
 
 if __name__ == "__main__":
     main()

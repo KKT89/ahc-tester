@@ -37,6 +37,7 @@ $ uv run ahc-tester/make_test.py L R
 ```
 
 ### ビルド
+解答ファイルのビルド前に、後述のパラメータファイルの最新化を行います。
 
 ```
 $ uv run ahc-tester/build.py
@@ -46,4 +47,11 @@ $ uv run ahc-tester/build.py
 
 ```
 $ uv run ahc-tester/combiner.py
+```
+
+### パラメータ追加
+`make_param.py` の `integer_params` と `float_params` を直接編集する、あまりお作法の良くなさそうな運用を想定しています。以下のコマンドで、ルートディレクトリに `param.json` と `param.cpp` を作成します。
+
+```
+$ uv run ahc-tester/make_param.py
 ```
