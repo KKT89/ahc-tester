@@ -14,7 +14,7 @@ config = {
     "files": {
         "config_file": CONFIG_FILE_NAME,   # 設定ファイルの名前
         "cpp_file": "main.cpp",            # メインのソースファイル
-        "combined_file": "combined.cpp", # 結合後のソースファイル
+        "combined_file": "combined.cpp",   # 結合後のソースファイル
         "sol_file": "solution",            # コンパイルしたプログラムの名前
         "gen_file": "gen",                 # テストケース生成プログラムの名前
         "vis_file": "vis",                 # ビジュアライズプログラムの名前
@@ -27,11 +27,10 @@ config = {
         "input_dir": "in",                    # テストケースの入力ファイルがあるディレクトリ
         "output_dir": "out",                  # テストケースの出力ファイルを保存するディレクトリ
         "tester_output_score_txt": "Score =", # テスターの出力からスコアを取得するための文字列
-        "max_worker_count": 12, # 並列実行するテストケースの数
+        "max_worker_count": 12,               # 並列実行するテストケースの数
     },
     "parameters": {
-        "param_json_file": "params.json", # パラメータファイルの名前
-        "param_cpp_file": "params.cpp",   # パラメータファイルの名前
+        "param_cpp_file": "params.cpp", # パラメータファイルの名前
     },
     "optuna": {
         "work_dir": "optuna_work",    # Optuna 用の作業ディレクトリ

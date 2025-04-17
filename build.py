@@ -1,5 +1,4 @@
 import os
-import make_param
 import setup
 import subprocess
 import sys
@@ -30,5 +29,4 @@ def compile_program(config):
 
 if __name__ == "__main__":
     config = setup.load_config()
-    make_param.main()
     compile_program(config)
