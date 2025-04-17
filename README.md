@@ -37,6 +37,13 @@ $ uv run ahc-tester/make_test.py L R
 ```
 
 ### ビルド
+
 ```
 $ uv run ahc-tester/build.py
+```
+
+### ファイル結合
+
+```
+$ uv run ahc-tester/combiner.py
 ```
