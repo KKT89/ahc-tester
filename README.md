@@ -54,3 +54,10 @@ $ uv run ahc-tester/combiner.py
 ```
 $ uv run ahc-tester/update_param.py
 ```
+
+### テスト実行
+以下のコマンドで150ケース分のテストを実行します。TODO：いろいろ作りかけ
+
+```
+$ uv run ahc-tester/run_test.py
+```
