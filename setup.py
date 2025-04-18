@@ -27,7 +27,6 @@ config = {
         "input_dir": "in",                    # テストケースの入力ファイルがあるディレクトリ
         "output_dir": "out",                  # テストケースの出力ファイルを保存するディレクトリ
         "tester_output_score_txt": "Score =", # テスターの出力からスコアを取得するための文字列
-        "max_worker_count": 12,               # 並列実行するテストケースの数
     },
     "parameters": {
         "param_cpp_file": "params.cpp", # パラメータファイルの名前

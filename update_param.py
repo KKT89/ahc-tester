@@ -53,6 +53,7 @@ def make_cpp(param_cpp_file):
     lines += [
         '    }',
         '}',
+        '',
     ]
 
     os.makedirs(os.path.dirname(param_cpp_file), exist_ok=True)
