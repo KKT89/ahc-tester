@@ -68,11 +68,11 @@ def make_cpp(param_cpp_file):
 def main():
     # コマンドライン引数をパース
     parser = argparse.ArgumentParser(
-        description="Generate C++ Params header from JSON or defaults"
+        description="Generate C++ Params header from JSON or defaults."
     )
     parser.add_argument(
         "-j",
-        help="JSON parameter file to load",
+        help="JSON parameter file to load.",
         dest="param_json",
         default=None
     )

@@ -4,15 +4,21 @@ import datetime
 import math
 import setup
 import subprocess
+import sys
 import time
 import os
 from concurrent.futures import as_completed
 from concurrent.futures import ProcessPoolExecutor
 
-def run_test_case(case_str, input_file, output_file, solution_file, vis_file, score_txt, is_interactive):
+def run_test_case(case_str, input_file, output_file, solution_file, vis_file, score_txt, is_interactive, params=None, cleanup=False):
+    if params:
+        cmd_cpp = [solution_file] + [str(item) for pair in params.items() for item in pair]
+    else:
+        cmd_cpp = [solution_file]
+    
     start_time = time.perf_counter()  # 実行前の時刻を取得
     subprocess.run(
-        [solution_file],
+        cmd_cpp,
         stdin=open(input_file, "r"),
         stdout=open(output_file, "w"),
         stderr=subprocess.DEVNULL,  # stderrは不要なら破棄
@@ -36,6 +42,13 @@ def run_test_case(case_str, input_file, output_file, solution_file, vis_file, sc
         if line.startswith(score_txt):
             score = int(line.split("=")[1].strip())
             break
+
+    # 一時ファイルの削除
+    if cleanup and os.path.isfile(output_file):
+        try:
+            os.remove(output_file)
+        except OSError as e:
+            print(f"Warning: failed to remove {output_file}: {e}", file=sys.stderr)
 
     return {
         "case": case_str,
@@ -94,7 +107,6 @@ def main():
     
     # スコアの合計を計算
     total_score = sum(result['score'] for result in results)
-    ave_score = total_score / len(results)
 
     # スコアのlogの合計を計算
     log_score = sum(math.log(result['score']) for result in results)

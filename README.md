@@ -65,3 +65,11 @@ $ uv run ahc-tester/update_param.py
 ```
 $ uv run ahc-tester/run_test.py
 ```
+
+### optuna
+
+TODO：いろいろ放置してます。
+
+```
+$ uv run ahc-tester/optuna_manager.py
+```
