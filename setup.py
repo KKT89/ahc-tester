@@ -29,6 +29,7 @@ config = {
         "tester_output_score_txt": "Score =", # テスターの出力からスコアを取得するための文字列
     },
     "parameters": {
+        "param_json_file": "params.json", # パラメータファイルの名前
         "param_cpp_file": "params.cpp", # パラメータファイルの名前
     },
     "optuna": {
