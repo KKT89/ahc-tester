@@ -8,28 +8,44 @@ def read_file_content(file_name: str) -> str:
         return f.read()
 
 def make_converted_file_content(
-        file_name: str,
+        file_path: str,
         stack: list[str],
-        added_file_names: set) -> str:
-    content = read_file_content(file_name)
-    content_lines = content.splitlines()
-    for i, line in enumerate(content_lines):
-        match = re.match(r'^\s*#include\s+"(.*)"\s*$', line)
-        if match:
-            include_file = match.group(1)
-            if include_file not in added_file_names:
-                if include_file in stack:
-                    print("Circular dependency detected: " + " > ".join(stack + [include_file]))
+        added_files: set[str]) -> str:
+    
+    content = read_file_content(file_path)
+    lines = content.splitlines()
+    output_lines: list[str] = []
+    base_dir = os.path.dirname(file_path)
+
+    for line in lines:
+        stripped = line.strip()
+        # Skip include guards and endif
+        if (stripped.startswith('#pragma once') or
+            stripped.startswith('#ifndef') or
+            stripped.startswith('#define') or
+            stripped.startswith('#endif')):
+            continue
+
+        include_match = re.match(r'^\s*#include\s+"(.+)"\s*$', line)
+        if include_match:
+            include_name = include_match.group(1)
+            include_path = os.path.normpath(os.path.join(base_dir, include_name))
+            if include_path not in added_files:
+                if include_path in stack:
+                    print("Circular dependency detected: " + " > ".join(stack + [include_path]))
                     sys.exit(1)
-                stack.append(include_file)
-                included_content = make_converted_file_content(include_file, stack, added_file_names)
-                content_lines[i] = included_content
-                added_file_names.add(include_file)
+                # separator comment with filename
+                output_lines.append(f"// ── {os.path.basename(include_path)} ──")
+                stack.append(include_path)
+                inlined = make_converted_file_content(include_path, stack, added_files)
+                output_lines.extend(inlined.splitlines())
+                added_files.add(include_path)
                 stack.pop()
-            else:
-                # 既に読み込んだファイルはスキップ
-                content_lines[i] = ""
-    return "\n".join(content_lines)
+            # skip if already added
+        else:
+            output_lines.append(line)
+
+    return "\n".join(output_lines)
 
 
 def main():
