@@ -2,66 +2,85 @@ import os
 import sys
 import re
 import setup
+from typing import List, Set
 
-def read_file_content(file_name: str) -> str:
-    with open(file_name, "r") as f:
+
+def read_file_content(file_path: str) -> str:
+    """Read and return the entire content of a file."""
+    with open(file_path, 'r') as f:
         return f.read()
 
-def make_converted_file_content(
+
+def inline_includes(
         file_path: str,
-        stack: list[str],
-        added_files: set[str]) -> str:
-    
-    content = read_file_content(file_path)
-    lines = content.splitlines()
-    output_lines: list[str] = []
+        stack: List[str],
+        added: Set[str]
+    ) -> List[str]:
+
     base_dir = os.path.dirname(file_path)
+    lines = read_file_content(file_path).splitlines()
+    output: List[str] = []
 
     for line in lines:
         stripped = line.strip()
-        # Skip include guards and endif
-        if (stripped.startswith('#pragma once') or
-            stripped.startswith('#ifndef') or
-            stripped.startswith('#define') or
-            stripped.startswith('#endif')):
+        # Skip header guards
+        if stripped.startswith(('#pragma once', '#ifndef', '#define', '#endif')):
             continue
 
-        include_match = re.match(r'^\s*#include\s+"(.+)"\s*$', line)
-        if include_match:
-            include_name = include_match.group(1)
-            include_path = os.path.normpath(os.path.join(base_dir, include_name))
-            if include_path not in added_files:
-                if include_path in stack:
-                    print("Circular dependency detected: " + " > ".join(stack + [include_path]))
-                    sys.exit(1)
-                # separator comment with filename
-                output_lines.append(f"// ── {os.path.basename(include_path)} ──")
-                stack.append(include_path)
-                inlined = make_converted_file_content(include_path, stack, added_files)
-                output_lines.extend(inlined.splitlines())
-                added_files.add(include_path)
-                stack.pop()
-            # skip if already added
-        else:
-            output_lines.append(line)
+        # Preserve only bits/stdc++.h system include
+        sys_match = re.match(r'^\s*#include\s+<(.+?)>\s*$', line)
+        if sys_match:
+            if sys_match.group(1) == 'bits/stdc++.h':
+                output.append(line)
+            continue
 
-    return "\n".join(output_lines)
+        # Handle local includes
+        inc_match = re.match(r'^\s*#include\s+"(.+?)"\s*$', line)
+        if inc_match:
+            inc_name = inc_match.group(1)
+            inc_path = os.path.normpath(os.path.join(base_dir, inc_name))
+
+            if inc_path in stack:
+                print(f"Circular dependency detected: {' > '.join(stack + [inc_path])}")
+                sys.exit(1)
+
+            if inc_path not in added:
+                # Separator comment
+                output.append(f"// ── {os.path.basename(inc_path)} ──")
+                stack.append(inc_path)
+                inlined = inline_includes(inc_path, stack, added)
+                stack.pop()
+                added.add(inc_path)
+                # Strip blank lines and append one blank line
+                for sub in inlined:
+                    if sub.strip():
+                        output.append(sub)
+                output.append('')
+            continue
+
+        # Default: copy line as-is
+        output.append(line)
+
+    return output
 
 
 def main():
     config = setup.load_config()
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    work_dir = os.path.abspath(os.path.join(
+        script_dir,
+        config['paths']['relative_work_dir']
+    ))
 
-    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-    relative_work_dir = config["paths"]["relative_work_dir"]
-    work_dir = os.path.abspath(os.path.join(SCRIPT_DIR, relative_work_dir))
-    cpp_file_path = os.path.join(work_dir, config["files"]["cpp_file"])
-    combined_file_path = os.path.join(work_dir, config["files"]["combined_file"])
+    src = os.path.join(work_dir, config['files']['cpp_file'])
+    dst = os.path.join(work_dir, config['files']['combined_file'])
 
-    converted_content = make_converted_file_content(cpp_file_path, [cpp_file_path], set())
-    with open(combined_file_path, "w") as f:
-        f.write(converted_content)
-    print(f"Combined file generated: {combined_file_path}")
+    combined_lines = inline_includes(src, [src], set())
+    with open(dst, 'w') as f:
+        f.write('\n'.join(combined_lines))
+
+    print(f"Combined file generated: {dst}")
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
