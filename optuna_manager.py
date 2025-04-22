@@ -151,6 +151,22 @@ def main():
         n_jobs=-1
     )
 
+    # 最終ベストパラメータで JSON の "value" を更新
+    best = study.best_params
+    with open(param_json_file, "r") as f:
+        data = json.load(f)
+
+    for key in ("integer_params", "float_params"):
+        for p in data.get(key, []):
+            name = p.get("name")
+            if p.get("used") and name in best:
+                p["value"] = best[name]
+
+    with open(param_json_file, "w") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+
+    print(f"[Done] Updated {param_json_file} with best params: {best}")
+
     print("Best params:", study.best_params)
     print("Best score:", study.best_value)
 
