@@ -68,8 +68,16 @@ $ uv run ahc-tester/run_test.py
 
 ### optuna
 
-TODO：いろいろ放置してます。
+以下のコマンドで Optuna を使ったパラメータ最適化を実行します。事前にルートディレクトリの `param.json` を最新化する必要があります。
 
 ```
 $ uv run ahc-tester/optuna_manager.py
 ```
+
+**オプション**
+- `--dir <ディレクトリ>`
+  - 指定したディレクトリから最適化を再開します。
+- `--last`
+  - `optuna_work` 配下で最も新しいサブディレクトリを自動的に選択します。(`--dir` より優先されます)
+- `--zero`
+  - `n_trials = 0` で実行します。パラメータを即時更新したい時に使います。

@@ -76,10 +76,22 @@ def main():
         description="Optuna study with parallel trials."
     )
     parser.add_argument(
-        "-d",
+        "--dir",
         help="Directory to store study results.",
         dest="dir",
         default=None
+    )
+    parser.add_argument(
+        "--last",
+        help="Use the most recent study directory under optuna work dir.",
+        action="store_true",
+        dest="last"
+    )
+    parser.add_argument(
+        "--zero",
+        help="Run with n_trials = 0 (skip optimization).",
+        action="store_true",
+        dest="zero"
     )
     args = parser.parse_args()
 
@@ -93,7 +105,15 @@ def main():
     if not os.path.exists(optuna_work_dir):
         os.makedirs(optuna_work_dir, exist_ok=True)
 
-    if args.dir:
+    if args.last:
+        # optuna_work_dir 配下のサブディレクトリを辞書順でソートして最新を取得
+        subs = [d for d in os.listdir(optuna_work_dir) if os.path.isdir(os.path.join(optuna_work_dir, d))]
+        if not subs:
+            print(f"Error: no study directories found in {optuna_work_dir}", file=sys.stderr)
+            sys.exit(1)
+        lastest = sorted(subs)[-1]
+        study_dir = os.path.join(optuna_work_dir, lastest)
+    elif args.dir:
         study_dir = args.dir
     else:
         timestamp = time.strftime("%Y%m%d_%H%M%S")
@@ -145,6 +165,9 @@ def main():
     )
 
     n_trials = 50
+    if args.zero:
+        n_trials = 0
+
     study.optimize(
         lambda trial: objective(trial, input_dir, output_dir, sol_file, vis_file, score_txt, is_interactive, param_json_file),
         n_trials=n_trials,
