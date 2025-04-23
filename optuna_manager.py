@@ -176,6 +176,7 @@ def main():
 
     # 最終ベストパラメータで JSON の "value" を更新
     best = study.best_params
+    best_score = study.best_value
     with open(param_json_file, "r") as f:
         data = json.load(f)
 
@@ -185,6 +186,7 @@ def main():
             if p.get("used") and name in best:
                 p["value"] = best[name]
 
+    data["best_score"] = best_score
     with open(param_json_file, "w") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
