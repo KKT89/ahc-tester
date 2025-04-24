@@ -11,6 +11,7 @@ import sys
 import time
 import uuid
 import warnings
+from optuna.storages import RDBStorage
 from optuna.exceptions import ExperimentalWarning
 
 warnings.filterwarnings("ignore", category=ExperimentalWarning)
@@ -155,10 +156,21 @@ def main():
     # WilcoxonPruner の設定
     pruner = optuna.pruners.WilcoxonPruner(p_threshold=0.1)
 
+    # SQLite ストレージの作成
+    storage = RDBStorage(
+        url=db_url,
+        engine_kwargs={
+            "connect_args": {
+                # ロック待ちを最大20秒まで許容
+                "timeout": 20.0,
+            }
+        },
+    )
+
     # Optuna study の作成
     study = optuna.create_study(
         study_name=config["optuna"]["db_name"],
-        storage=db_url,
+        storage=storage,
         load_if_exists=True,
         direction=config["problem"]["objective"],
         pruner=pruner,
