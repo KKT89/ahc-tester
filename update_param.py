@@ -4,33 +4,17 @@ import os
 import setup
 import sys
 
-# ====================================================================
-# === パラメータは以下を編集すること！ ===
-
-# (name, (lower, upper, value), used_in_optuna)
-integer_params = [
-    ("sample_int", (1, 100, 50), False),
-]
-
-# (name, (lower, upper, value), used_in_optuna, log_mode)
-float_params = [
-    ("sample_float", (1.0, 10.0, 1.5), False, False),
-]
-
-# ====================================================================
-
-
-def make_cpp(param_cpp_file):
+def make_cpp(param_json, param_cpp_file):
     lines = [
         'struct Params {',
     ]
 
     # 整数パラメータ
-    for name, (l, u, v), used in integer_params:
-        lines.append(f'    int {name} = {v};')
+    for p in param_json.get("integer_params", []):
+        lines.append(f'    int {p["name"]} = {p["value"]};')
     # 浮動小数点パラメータ
-    for name, (l, u, v), used, log_mode in float_params:
-        lines.append(f'    double {name} = {v};')
+    for p in param_json.get("float_params", []):
+        lines.append(f'    double {p["name"]} = {p["value"]};')
 
     lines += [
         '} Params;',
@@ -43,14 +27,14 @@ def make_cpp(param_cpp_file):
     ]
 
     # 整数パラメータ
-    for name, (l, u, v), used in integer_params:
-        lines.append(f'        if (key == "{name}") {{')
-        lines.append(f'            iss >> Params.{name};')
+    for p in param_json.get("integer_params", []):
+        lines.append(f'        if (key == "{p["name"]}") {{')
+        lines.append(f'            iss >> Params.{p["name"]};')
         lines.append('        }')
     # 浮動小数点パラメータ
-    for name, (l, u, v), used, log_mode in float_params:
-        lines.append(f'        if (key == "{name}") {{')
-        lines.append(f'            iss >> Params.{name};')
+    for p in param_json.get("float_params", []):
+        lines.append(f'        if (key == "{p["name"]}") {{')
+        lines.append(f'            iss >> Params.{p["name"]};')
         lines.append('        }')
 
     lines += [
@@ -72,6 +56,7 @@ def main():
     )
     parser.add_argument(
         "-j",
+        "--json",
         help="JSON parameter file to load.",
         dest="param_json",
         default=None
@@ -86,41 +71,40 @@ def main():
     param_cpp_file = os.path.join(work_dir, config["parameters"]["param_cpp_file"])
 
     if args.param_json is None:
-        # JSONファイルが指定されていない場合は、新規作成
-        param_json = os.path.join(work_dir, config["parameters"]["param_json_file"])
-        payload = {
-            "integer_params": [
-                {"name": n, "lower": l, "upper": u, "value": v, "used": used}
-                for n,(l,u,v),used in integer_params
-            ],
-            "float_params": [
-                {"name": n, "lower": l, "upper": u, "value": v, "used": used, "log": log_mode}
-                for n,(l,u,v),used,log_mode in float_params
-            ]
-        }
-        os.makedirs(os.path.dirname(param_json), exist_ok=True)
-        with open(param_json, "w") as jf:
-            json.dump(payload, jf, indent=4)
-        print(f"Generated default JSON: {param_json}")
-    else:
-        # JSONファイルが指定された場合は、読み込み
-        param_json = args.param_json
-        # JSONファイルの存在確認
-        if not os.path.isfile(param_json):
-            print(f"Error: JSON file not found: {param_json}", file=sys.stderr)
+        json_path = os.path.join(work_dir, config["parameters"]["param_json_file"])
+        # ファイルが存在するか確認
+        if not os.path.isfile(json_path):
+            print(f"Error: params.json not found in current directory: {os.getcwd()}", file=sys.stderr)
+            print("Please create params.json or specify path with -j option.", file=sys.stderr)
             sys.exit(1)
-        # JSONファイルを読み込み
-        with open(args.param_json, "r") as jf:
-            payload = json.load(jf)
-        integer_params.clear()
-        float_params.clear()
-        for p in payload["integer_params"]:
-            integer_params.append((p["name"], (p["lower"], p["upper"], p["value"]), p["used"]))
-        for p in payload["float_params"]:
-            float_params.append((p["name"], (p["lower"], p["upper"], p["value"]), p["used"], p["log"]))
+        print(f"Using params.json from current directory: {json_path}")
+    else:
+        # 指定されたパスのJSONファイルを使用
+        json_path = args.param_json
+        # ファイルが存在するか確認
+        if not os.path.isfile(json_path):
+            print(f"Error: JSON file not found at specified path: {json_path}", file=sys.stderr)
+            sys.exit(1)
+        print(f"Using specified JSON file: {json_path}")
+
+    # JSONファイルを読み込む
+    try:
+        with open(json_path, "r") as jf:
+            param_json = json.load(jf)
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON format in {json_path}: {e}", file=sys.stderr)
+        sys.exit(1)
+    except IOError as e:
+        print(f"Error: Could not read file {json_path}: {e}", file=sys.stderr)
+        sys.exit(1)
+        
+    # JSONの構造を検証
+    if "integer_params" not in param_json or "float_params" not in param_json:
+        print(f"Error: JSON file {json_path} must contain 'integer_params' and 'float_params' keys", file=sys.stderr)
+        sys.exit(1)
 
     # C++ 用のパラメータファイルを生成
-    make_cpp(param_cpp_file)
+    make_cpp(param_json, param_cpp_file)
 
 
 if __name__ == "__main__":
