@@ -49,15 +49,15 @@ $ uv run ahc-tester/combiner.py
 ```
 
 ### パラメータ更新
-`update_param.py` の `integer_params` と `float_params` を直接編集する、あまりお作法の良くなさそうな運用を想定しています。以下のコマンドで、ルートディレクトリに `param.cpp` と `param.json` を作成します。
+以下のコマンドで、ルートディレクトリに存在する `params.json` から、`params.cpp` を作成します。
 
 ```
 $ uv run ahc-tester/update_param.py
 ```
 
 **オプション**
-- `-j`
-  - 指定したJSONファイルの内容で、`param.cpp` を作成します。
+- `-j, --json`
+  - 指定したパスの、JSONファイルに基づいて、`params.cpp` を作成します。
 
 ### テスト実行
 以下のコマンドで150ケース分のテストを実行します。TODO：いろいろ作りかけ
