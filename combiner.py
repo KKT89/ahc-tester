@@ -15,8 +15,7 @@ def inline_includes(
         file_path: str,
         stack: List[str],
         added: Set[str]
-    ) -> List[str]:
-
+) -> List[str]:
     base_dir = os.path.dirname(file_path)
     lines = read_file_content(file_path).splitlines()
     output: List[str] = []
@@ -24,7 +23,7 @@ def inline_includes(
     for line in lines:
         stripped = line.strip()
         # Skip header guards
-        if stripped.startswith(('#pragma once', '#ifndef', '#define', '#endif')):
+        if stripped.startswith(('#pragma once')):
             continue
 
         # Preserve only bits/stdc++.h system include
