@@ -10,11 +10,23 @@ import os
 from concurrent.futures import as_completed
 from concurrent.futures import ProcessPoolExecutor
 
-def run_test_case(case_str, input_file, output_file, solution_file, vis_file, score_txt, is_interactive, params=None, cleanup=False):
-    if params:
-        cmd_cpp = [solution_file] + [str(item) for pair in params.items() for item in pair]
-    else:
+def run_test_case(case_str, input_file, output_file, solution_file, vis_file, score_txt, is_interactive, params=None, cleanup=False, use_env=False, env_prefix=None):
+    # パラメータの渡し方を選択
+    # - use_env=False: 既存通り CLI 引数で渡す
+    # - use_env=True : 環境変数で渡す（並列でも安全）
+    if use_env:
         cmd_cpp = [solution_file]
+        env = os.environ.copy()
+        if params:
+            for k, v in params.items():
+                key = f"{env_prefix}{k}" if env_prefix else k
+                env[key] = str(v)
+    else:
+        if params:
+            cmd_cpp = [solution_file] + [str(item) for pair in params.items() for item in pair]
+        else:
+            cmd_cpp = [solution_file]
+        env = None
     
     start_time = time.perf_counter()  # 実行前の時刻を取得
     subprocess.run(
@@ -22,7 +34,8 @@ def run_test_case(case_str, input_file, output_file, solution_file, vis_file, sc
         stdin=open(input_file, "r"),
         stdout=open(output_file, "w"),
         stderr=subprocess.DEVNULL,  # stderrは不要なら破棄
-        text=True
+        text=True,
+        env=env,
     )
     end_time = time.perf_counter()  # 実行後の時刻を取得
 

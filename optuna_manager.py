@@ -40,7 +40,7 @@ def suggest_parameters(trial, json_file):
     return params
 
 
-def objective(trial, input_dir, output_dir, sol_file, vis_file, score_txt, is_interactive, param_json_file):
+def objective(trial, input_dir, output_dir, sol_file, vis_file, score_txt, is_interactive, param_json_file, env_prefix=None):
     params = suggest_parameters(trial, param_json_file)
 
     all_test_numbers = np.arange(50)
@@ -56,7 +56,20 @@ def objective(trial, input_dir, output_dir, sol_file, vis_file, score_txt, is_in
             print(f"Error: {input_file} was not found.")
             exit(1)
         
-        res = run_test.run_test_case(case_str, input_file, output_file, sol_file, vis_file, score_txt, is_interactive, params, True)
+        # Optuna の各試行で得たパラメータを環境変数として子プロセスへ注入
+        res = run_test.run_test_case(
+            case_str,
+            input_file,
+            output_file,
+            sol_file,
+            vis_file,
+            score_txt,
+            is_interactive,
+            params,
+            cleanup=True,
+            use_env=True,
+            env_prefix=env_prefix,
+        )
         score = res['score']
         if score <= 0:
             results.append(-1)
@@ -180,10 +193,14 @@ def main():
     if args.zero:
         n_trials = 0
 
+    # 必要なら環境変数名にプレフィックスを付けたい場合はここで設定（例: "HP_")
+    # 既定はヘッダのデフォルトに合わせて HP_
+    env_prefix = os.environ.get("OPTUNA_PARAM_ENV_PREFIX", "HP_")
+
     study.optimize(
-        lambda trial: objective(trial, input_dir, output_dir, sol_file, vis_file, score_txt, is_interactive, param_json_file),
+        lambda trial: objective(trial, input_dir, output_dir, sol_file, vis_file, score_txt, is_interactive, param_json_file, env_prefix=env_prefix),
         n_trials=n_trials,
-        n_jobs=-1
+        n_jobs=-1,
     )
 
     # 最終ベストパラメータで JSON の "value" を更新
