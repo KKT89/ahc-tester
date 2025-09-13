@@ -40,11 +40,21 @@ def suggest_parameters(trial, json_file):
     return params
 
 
-def objective(trial, input_dir, output_dir, sol_file, vis_file, score_txt, is_interactive, param_json_file):
+def objective(trial, input_dir, output_dir, sol_file, vis_file, score_txt, is_interactive, param_json_file, env_prefix=None):
     params = suggest_parameters(trial, param_json_file)
 
-    all_test_numbers = np.arange(50)
-    shuffled_ids = np.random.permutation(all_test_numbers)
+    # 固定順序（Prunerの影響を安定化）: 環境変数 OPTUNA_OBJECTIVE_SEED で制御
+    seed_env = os.environ.get("OPTUNA_OBJECTIVE_SEED")
+    if seed_env is not None:
+        try:
+            seed_val = int(seed_env)
+        except Exception:
+            seed_val = 0
+        rng = np.random.default_rng(seed_val)
+        shuffled_ids = rng.permutation(np.arange(50))
+    else:
+        all_test_numbers = np.arange(50)
+        shuffled_ids = np.random.permutation(all_test_numbers)
 
     results = []
     for instance_id in shuffled_ids:
@@ -56,7 +66,20 @@ def objective(trial, input_dir, output_dir, sol_file, vis_file, score_txt, is_in
             print(f"Error: {input_file} was not found.")
             exit(1)
         
-        res = run_test.run_test_case(case_str, input_file, output_file, sol_file, vis_file, score_txt, is_interactive, params, True)
+        # Optuna の各試行で得たパラメータを環境変数として子プロセスへ注入
+        res = run_test.run_test_case(
+            case_str,
+            input_file,
+            output_file,
+            sol_file,
+            vis_file,
+            score_txt,
+            is_interactive,
+            params,
+            cleanup=True,
+            use_env=True,
+            env_prefix=env_prefix,
+        )
         score = res['score']
         if score <= 0:
             results.append(-1)
@@ -176,33 +199,52 @@ def main():
         pruner=pruner,
     )
 
-    n_trials = 50
+    n_trials = 500
     if args.zero:
         n_trials = 0
 
+    # 必要なら環境変数名にプレフィックスを付けたい場合はここで設定（例: "HP_")
+    # 既定はヘッダのデフォルトに合わせて HP_
+    env_prefix = os.environ.get("OPTUNA_PARAM_ENV_PREFIX", "HP_")
+
+    # 並列度は環境変数 OPTUNA_N_JOBS で上書き可能（デフォルト: -1 = 最大）
+    n_jobs_env = os.environ.get("OPTUNA_N_JOBS")
+    try:
+        n_jobs = int(n_jobs_env) if n_jobs_env is not None else -1
+    except Exception:
+        n_jobs = -1
+
     study.optimize(
-        lambda trial: objective(trial, input_dir, output_dir, sol_file, vis_file, score_txt, is_interactive, param_json_file),
+        lambda trial: objective(trial, input_dir, output_dir, sol_file, vis_file, score_txt, is_interactive, param_json_file, env_prefix=env_prefix),
         n_trials=n_trials,
-        n_jobs=-1
+        n_jobs=n_jobs,
     )
 
-    # 最終ベストパラメータで JSON の "value" を更新
+    # 最終ベストパラメータで study_dir の JSON の "value" を更新し、ルートの params.json にも反映
     best = study.best_params
     best_score = study.best_value
-    with open(param_json_file, "r") as f:
-        data = json.load(f)
 
-    for key in ("integer_params", "float_params"):
-        for p in data.get(key, []):
-            name = p.get("name")
-            if p.get("used") and name in best:
-                p["value"] = best[name]
+    def _apply_best_to_json(path):
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        for key in ("integer_params", "float_params"):
+            for p in data.get(key, []):
+                name = p.get("name")
+                if p.get("used") and name in best:
+                    p["value"] = best[name]
+        data["best_score"] = best_score
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
 
-    data["best_score"] = best_score
-    with open(param_json_file, "w") as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
-
+    # study ディレクトリ側
+    _apply_best_to_json(param_json_file)
     print(f"[Done] Updated {param_json_file} with best params: {best}")
+
+    # ルート側
+    root_param_json = os.path.join(work_dir, config["parameters"]["param_json_file"])
+    if os.path.isfile(root_param_json):
+        _apply_best_to_json(root_param_json)
+        print(f"[Done] Also updated {root_param_json} with best params.")
 
     print("Best params:", study.best_params)
     print("Best score:", study.best_value)

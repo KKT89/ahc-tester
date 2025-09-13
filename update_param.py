@@ -5,7 +5,14 @@ import setup
 import sys
 
 def make_cpp(param_json, param_cpp_file):
-    lines = [
+    lines = []
+    # 必要なヘッダ
+    lines += [
+        '#include <string>',
+        '#include <sstream>',
+        '#include <cstdlib>',
+        '',
+        '// 自動生成: 環境変数およびCLI引数でパラメータを上書き可能',
         'struct Params {',
     ]
 
@@ -19,23 +26,46 @@ def make_cpp(param_json, param_cpp_file):
     lines += [
         '} Params;',
         '',
+        '// 環境変数から読み込むユーティリティ',
+        'template <typename T>',
+        'static T get_env_or(const char* name, T fallback) {',
+        '    const char* s = std::getenv(name);',
+        '    if (!s) return fallback;',
+        '    std::stringstream ss(s);',
+        '    T v; ss >> v; return ss.fail() ? fallback : v;',
+        '}',
+        '',
+        '// 起動時に自動で環境変数を反映',
+        '#if !defined(ONLINE_JUDGE)',
+        'static void loadParamsFromEnv() {',
+    ]
+
+    for p in param_json.get("integer_params", []):
+        name = p["name"]
+        lines.append(f'    Params.{name} = get_env_or<int>("{name}", Params.{name});')
+    for p in param_json.get("float_params", []):
+        name = p["name"]
+        lines.append(f'    Params.{name} = get_env_or<double>("{name}", Params.{name});')
+
+    lines += [
+        '}',
+        'struct _ParamsEnvAutoload { _ParamsEnvAutoload(){ loadParamsFromEnv(); } } _paramsEnvAutoload;',
+        '#endif',
+        '',
+        '// 互換性のためCLI引数でも上書き可能（既存コード用）',
         'void updateParams(int argc, char* argv[]) {',
-        '    for (int i = 1; i < argc; i += 2) {',
+        '    for (int i = 1; i + 1 < argc; i += 2) {',
         '        std::string key = argv[i];',
         '        std::string value = argv[i + 1];',
         '        std::istringstream iss(value);'
     ]
 
-    # 整数パラメータ
     for p in param_json.get("integer_params", []):
-        lines.append(f'        if (key == "{p["name"]}") {{')
-        lines.append(f'            iss >> Params.{p["name"]};')
-        lines.append('        }')
-    # 浮動小数点パラメータ
+        name = p["name"]
+        lines.append(f'        if (key == "{name}") {{ iss >> Params.{name}; }}')
     for p in param_json.get("float_params", []):
-        lines.append(f'        if (key == "{p["name"]}") {{')
-        lines.append(f'            iss >> Params.{p["name"]};')
-        lines.append('        }')
+        name = p["name"]
+        lines.append(f'        if (key == "{name}") {{ iss >> Params.{name}; }}')
 
     lines += [
         '    }',

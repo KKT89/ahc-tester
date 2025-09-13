@@ -10,11 +10,51 @@ import os
 from concurrent.futures import as_completed
 from concurrent.futures import ProcessPoolExecutor
 
-def run_test_case(case_str, input_file, output_file, solution_file, vis_file, score_txt, is_interactive, params=None, cleanup=False):
-    if params:
-        cmd_cpp = [solution_file] + [str(item) for pair in params.items() for item in pair]
-    else:
+def _load_params_from_json_if_requested(config):
+    """RUNTEST_USE_JSON が設定されている場合、params.json から used=true の値を読み
+    {name: value} の辞書として返す。環境変数用のプレフィックスも返す。
+    """
+    if os.environ.get("RUNTEST_USE_JSON") is None:
+        return None, None
+    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+    relative_work_dir = config["paths"]["relative_work_dir"]
+    work_dir = os.path.abspath(os.path.join(SCRIPT_DIR, relative_work_dir))
+    param_json_file = os.path.join(work_dir, config["parameters"]["param_json_file"])
+    try:
+        import json
+        with open(param_json_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        params = {}
+        for key in ("integer_params", "float_params"):
+            for p in data.get(key, []):
+                if p.get("used"):
+                    name = p.get("name")
+                    value = p.get("value")
+                    if name is not None and value is not None:
+                        params[name] = value
+        env_prefix = os.environ.get("OPTUNA_PARAM_ENV_PREFIX", "HP_")
+        return params, env_prefix
+    except Exception as e:
+        print(f"Warning: failed to load params from {param_json_file}: {e}", file=sys.stderr)
+        return None, None
+
+def run_test_case(case_str, input_file, output_file, solution_file, vis_file, score_txt, is_interactive, params=None, cleanup=False, use_env=False, env_prefix=None):
+    # パラメータの渡し方を選択
+    # - use_env=False: 既存通り CLI 引数で渡す
+    # - use_env=True : 環境変数で渡す（並列でも安全）
+    if use_env:
         cmd_cpp = [solution_file]
+        env = os.environ.copy()
+        if params:
+            for k, v in params.items():
+                key = f"{env_prefix}{k}" if env_prefix else k
+                env[key] = str(v)
+    else:
+        if params:
+            cmd_cpp = [solution_file] + [str(item) for pair in params.items() for item in pair]
+        else:
+            cmd_cpp = [solution_file]
+        env = None
     
     start_time = time.perf_counter()  # 実行前の時刻を取得
     subprocess.run(
@@ -22,7 +62,8 @@ def run_test_case(case_str, input_file, output_file, solution_file, vis_file, sc
         stdin=open(input_file, "r"),
         stdout=open(output_file, "w"),
         stderr=subprocess.DEVNULL,  # stderrは不要なら破棄
-        text=True
+        text=True,
+        env=env,
     )
     end_time = time.perf_counter()  # 実行後の時刻を取得
 
@@ -79,8 +120,48 @@ def main():
     wrong_answer_count = 0
     results = []
 
-    with ProcessPoolExecutor(max_workers=None) as executor:
-        futures = []
+    params_from_json, env_prefix = _load_params_from_json_if_requested(config)
+
+    use_mp = os.environ.get("RUNTEST_SEQUENTIAL") is None
+    if use_mp:
+        try:
+            with ProcessPoolExecutor(max_workers=None) as executor:
+                futures = []
+                for i in range(testcase_count):
+                    case_str = f"{i:04d}"
+                    input_file = os.path.join(input_dir, case_str + ".txt")
+                    output_file = os.path.join(output_dir, case_str + ".txt")
+                    if not os.path.exists(input_file):
+                        print(f"Error: {input_file} was not found.")
+                        continue
+                    futures.append(executor.submit(
+                        run_test_case,
+                        case_str,
+                        input_file,
+                        output_file,
+                        solution_file,
+                        vis_file,
+                        score_txt,
+                        is_interactive,
+                        params=params_from_json,
+                        use_env=(params_from_json is not None),
+                        env_prefix=env_prefix,
+                    ))
+
+                for future in as_completed(futures):
+                    result = future.result()
+                    score = result['score']
+                    if score <= 0:
+                        wrong_answer_count += 1
+                        print(f"Error: {result['case']} failed to get score.")
+                        continue
+                    results.append(result)
+                    print(f"seed:{result['case']}  score:{result['score']:,d}  ({result['elapsed_time']:.2f} ms)")
+        except Exception as e:
+            print(f"ProcessPool unavailable ({e}); falling back to sequential.")
+            use_mp = False
+
+    if not use_mp:
         for i in range(testcase_count):
             case_str = f"{i:04d}"
             input_file = os.path.join(input_dir, case_str + ".txt")
@@ -88,11 +169,18 @@ def main():
             if not os.path.exists(input_file):
                 print(f"Error: {input_file} was not found.")
                 continue
-            # テストケースの実行
-            futures.append(executor.submit(run_test_case, case_str, input_file, output_file, solution_file, vis_file, score_txt, is_interactive))
-
-        for future in as_completed(futures):
-            result = future.result()
+            result = run_test_case(
+                case_str,
+                input_file,
+                output_file,
+                solution_file,
+                vis_file,
+                score_txt,
+                is_interactive,
+                params=params_from_json,
+                use_env=(params_from_json is not None),
+                env_prefix=env_prefix,
+            )
             score = result['score']
             if score <= 0:
                 wrong_answer_count += 1
