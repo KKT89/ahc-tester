@@ -1,6 +1,19 @@
 import os
 import subprocess
-import toml
+"""
+Lightweight config loader/writer for ahc-tester.
+
+Prefers the external `toml` package when available. Falls back to the
+standard library `tomllib` (Python 3.11+) for loading when `toml` is not
+installed. This avoids requiring network installs in constrained
+environments when only reading config.
+"""
+try:
+    import toml as _toml  # external package (read/write)
+    _HAS_EXTERNAL_TOML = True
+except Exception:
+    import tomllib as _toml  # stdlib (read-only)
+    _HAS_EXTERNAL_TOML = False
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE_NAME = "config.toml"
@@ -44,9 +57,42 @@ config = {
 }
 
 
+def _toml_load(path):
+    # external `toml` expects text mode, stdlib `tomllib` expects binary
+    if _HAS_EXTERNAL_TOML:
+        with open(path, "r", encoding="utf-8") as f:
+            return _toml.load(f)
+    else:
+        with open(path, "rb") as f:
+            return _toml.load(f)
+
+
+def _toml_dump(data, path):
+    if not _HAS_EXTERNAL_TOML:
+        # Minimal fallback: only used by interactive setup flow.
+        # Emit a simple TOML via string formatting to avoid the external dep.
+        # This covers current config structure; extend if structure changes.
+        lines = []
+        for section, values in data.items():
+            lines.append(f"[{section}]\n")
+            for k, v in values.items():
+                if isinstance(v, bool):
+                    val = "true" if v else "false"
+                elif isinstance(v, (int, float)):
+                    val = str(v)
+                else:
+                    val = f'"{v}"'
+                lines.append(f"{k} = {val}\n")
+            lines.append("\n")
+        with open(path, "w", encoding="utf-8") as f:
+            f.writelines(lines)
+    else:
+        with open(path, "w", encoding="utf-8") as f:
+            _toml.dump(data, f)
+
+
 def create_config_file(config, config_path):
-    with open(config_path, "w") as f:
-        toml.dump(config, f)
+    _toml_dump(config, config_path)
     print(f"{config_path} has been overwritten successfully!\n")
 
 
@@ -55,8 +101,7 @@ def load_config():
     if not os.path.exists(CONFIG_FILE):
         print(f"Error: {CONFIG_FILE} was not found. Please run setup.py first.")
         return None
-    with open(CONFIG_FILE, "r") as f:
-        return toml.load(f)
+    return _toml_load(CONFIG_FILE)
 
 
 def build_tools_with_cargo():

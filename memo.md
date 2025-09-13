@@ -19,7 +19,7 @@
 - 更新: `update_param.py`
   - 生成する `params.cpp` で環境変数ロードも可能（互換用）。ただし「ヘッダ運用」なら不要。
 - 更新: `build.py`
-  - `hp_params.hpp` をワークディレクトリへ配置。
+  - `hp_params.hpp` は `lib/heuristic-lib/` に常駐。コピーは行わない設計に変更。
   - `HP_ENV_PREFIX` 環境変数があれば `-DHP_ENV_PREFIX="..."` を自動付与。
   - （互換）`params.json` があれば `params.cpp` を自動再生成。
 
@@ -27,7 +27,7 @@
 `main.cpp` 先頭付近で:
 
 ```cpp
-#include "hp_params.hpp"
+#include "lib/heuristic-lib/hp_params.hpp"
 
 HP_PARAM(int,    ITER,  500,  1,   5000);
 HP_PARAM(double, ALPHA, 0.30, 0.0, 1.0);
@@ -63,6 +63,7 @@ static void initParamsFromHP(){ Params.ITER = ITER; Params.ALPHA = ALPHA; }
 
 ## 既存 `params.cpp` からの移行
 - ヘッダ運用へ移行する場合、`params.cpp` / `updateParams(...)` は不要。
+- `hp_params.hpp` は `lib/heuristic-lib/` に配置（コピー不要）。
 - 段階移行中は併存しても可。ただし重複上書きに注意。
 
 ## 補足（DB）

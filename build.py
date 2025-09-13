@@ -27,13 +27,7 @@ def compile_program(config):
     except Exception as e:
         print(f"Warning: failed to (re)generate params.cpp automatically: {e}")
 
-    # hp_params.hpp をワークディレクトリに配置（C++のみで完結運用を補助）
-    try:
-        header_src = os.path.join(SCRIPT_DIR, "hp_params.hpp")
-        if os.path.isfile(header_src):
-            shutil.copy(header_src, os.path.join(work_dir, "hp_params.hpp"))
-    except Exception as e:
-        print(f"Warning: failed to place hp_params.hpp: {e}")
+    # hp_params.hpp は lib/heuristic-lib/ に常駐させ、コピーはしない設計に変更
 
     cpp_file_path = os.path.join(work_dir, config["files"]["cpp_file"])
     sol_file_path = os.path.join(work_dir, config["files"]["sol_file"])
