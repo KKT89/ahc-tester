@@ -1,32 +1,44 @@
 # ahc-tester
 AtCoder Heuristic Contest (AHC) で使用しているツール群です。
 
-## ディレクトリ構成
-以下のディレクトリ構成を想定しています。
-```
-AHCxxx/                  // ルートディレクトリ
-├── ahc-tester/           
-├── tools/               // 公式ローカルテストツール
-└── main.cpp             // 解答コード
-```
-
 ## 使い方
 
 ### Python環境
-Pythonにわかなので全てを間違えている自信があります。~~(動いてるからヨシ！)~~
-
-以下のコマンド群は、全てルートディレクトリで実行することを想定しています。この設計の時点であまり良くないんだろうなという気はしています。
+以下はルートディレクトリで実行します。
 ```
 $ uv venv .venv
 $ uv pip install -r ahc-tester/requirements.txt
 ```
 
 ### セットアップ
-設定ファイル `config.toml` の作成と、公式ローカルテストツールのビルドを実行します。
+設定ファイル `config.toml` の作成と、公式ローカルテストツールのビルドを実行します。`objective` と TL は必須、インタラクティブは必要なときだけ `-i` を付けます。
 
-TODO：objective(最大/最小)と、インタラクティブの有無は現在手動でコード書き換える必要があります。
 ```
-$ uv run ahc-tester/setup.py
+$ uv run ahc-tester/setup.py {max|min|maximize|minimize} TL-sec [-i]
+```
+
+**主な引数**
+- `objective`(位置引数): 最適化方向（必須）。`max|min|maximize|minimize` を受け付け、内部的に `maximize|minimize` に正規化します。
+- `TL-sec`(位置引数): タイムリミット（秒、必須）。config にはミリ秒整数（`time_limit_ms`）として保存されます。
+- `-i, --interactive`: インタラクティブ問題の場合に指定（省略時は非インタラクティブ）。指定時のみ `tester` をビルドします。
+
+**使用例**
+- 非インタラクティブ・最大化（TL=2 秒）:
+```
+$ uv run ahc-tester/setup.py max 2
+```
+- インタラクティブ・最大化（TL=2.5 秒）:
+```
+$ uv run ahc-tester/setup.py max 2.5 -i
+```
+- 非インタラクティブ・最小化（TL=1 秒）:
+```
+$ uv run ahc-tester/setup.py min 1
+```
+
+ヘルプ表示:
+```
+$ uv run ahc-tester/setup.py --help
 ```
 
 ### テストケース作成
@@ -60,7 +72,7 @@ $ uv run ahc-tester/update_param.py
   - 指定したパスの、JSONファイルに基づいて、`params.cpp` を作成します。
 
 ### テスト実行
-以下のコマンドで150ケース分のテストを実行します。TODO：いろいろ作りかけ
+以下のコマンドでテストを実行します。
 
 ```
 $ uv run ahc-tester/run_test.py
