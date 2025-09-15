@@ -20,9 +20,9 @@ $ uv run ahc-tester/setup.py {max|min|maximize|minimize} TL-sec [-i]
 ```
 
 **主な引数**
-- objective：最適化方向 `max|min|maximize|minimize` を受け付け、内部で `maximize|minimize` に正規化します。
-- TL-sec：config ではミリ秒整数 `time_limit_ms` で保存します。
-- -i, --interactive：インタラクティブ問題のときに指定し、この時 `tester` を追加でビルドします。
+- `objective`：最適化方向 `max|min|maximize|minimize` を受け付け、内部で `maximize|minimize` に正規化します。
+- `TL-sec`：config ではミリ秒整数 `time_limit_ms` で保存します。
+- `-i, --interactive`：インタラクティブ問題のときに指定し、この時 `tester` を追加でビルドします。
 
 **使用例**
 - 非インタラクティブ・最大化 (TL=2sec)
@@ -38,7 +38,7 @@ $ uv run ahc-tester/setup.py max 2.5 -i
 $ uv run ahc-tester/setup.py min 1
 ```
 
-ヘルプ表示:
+**ヘルプ表示**
 ```
 $ uv run ahc-tester/setup.py --help
 ```

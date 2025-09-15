@@ -1,4 +1,1 @@
-*.toml
-*.txt
-tmp*
 __pycache__
