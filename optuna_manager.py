@@ -4,13 +4,14 @@ import json
 import numpy as np
 import os
 import optuna
-import run_test
 import config_util as config_util
 import shutil
 import sys
 import time
 import uuid
 import warnings
+import re
+import subprocess
 from optuna.storages import RDBStorage
 from optuna.exceptions import ExperimentalWarning
 
@@ -40,7 +41,57 @@ def suggest_parameters(trial, json_file):
     return params
 
 
-def objective(trial, input_dir, output_dir, sol_file, vis_file, score_txt, is_interactive, param_json_file, env_prefix=None):
+def _extract_hp_params_from_cpp(cpp_path: str) -> dict:
+    """Parse HP_PARAM(type, name, def, low, high) from a C++ file.
+
+    Returns a params.json-like dict with integer_params and float_params.
+    Only simple numeric literals are supported. Others are skipped.
+    """
+    with open(cpp_path, "r", encoding="utf-8", errors="ignore") as f:
+        text = f.read()
+
+    pattern = re.compile(r"HP_PARAM\(\s*([^,]+)\s*,\s*([^,]+)\s*,\s*([^,]+)\s*,\s*([^,]+)\s*,\s*([^\)]+)\)")
+    ints, floats = [], []
+
+    def _to_num(s: str):
+        s = s.strip().rstrip(';')
+        # remove suffixes like f, F if any
+        try:
+            if re.match(r"^[+-]?\d+$", s):
+                return int(s)
+            return float(s)
+        except Exception:
+            return None
+
+    for m in pattern.finditer(text):
+        ty, name, d, lo, hi = (t.strip() for t in m.groups())
+        # sanitize name if it's like IDENT or qualified
+        name = re.sub(r"[^A-Za-z0-9_].*$", "", name)
+        v_def, v_lo, v_hi = _to_num(d), _to_num(lo), _to_num(hi)
+        if v_def is None or v_lo is None or v_hi is None:
+            continue
+        rec = {
+            "name": name,
+            "lower": v_lo,
+            "upper": v_hi,
+            "value": v_def,
+            "used": True,
+        }
+        ty_l = ty.replace("const", "").strip().lower()
+        if any(k in ty_l for k in ["double", "float"]):
+            floats.append(rec)
+        else:
+            ints.append(rec)
+
+    return {"integer_params": ints, "float_params": floats}
+
+
+def _write_params_json(data: dict, path: str) -> None:
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def objective(trial, input_dir, output_dir, sol_file, vis_file, score_txt, param_json_file, env_prefix: str = "HP_"):
     params = suggest_parameters(trial, param_json_file)
 
     # 固定順序（Prunerの影響を安定化）: 環境変数 OPTUNA_OBJECTIVE_SEED で制御
@@ -67,20 +118,42 @@ def objective(trial, input_dir, output_dir, sol_file, vis_file, score_txt, is_in
             exit(1)
         
         # Optuna の各試行で得たパラメータを環境変数として子プロセスへ注入
-        res = run_test.run_test_case(
-            case_str,
-            input_file,
-            output_file,
-            sol_file,
-            vis_file,
-            score_txt,
-            is_interactive,
-            params,
-            cleanup=True,
-            use_env=True,
-            env_prefix=env_prefix,
+        # Run solution with params injected via environment variables
+        env = os.environ.copy()
+        for k, v in params.items():
+            env[f"{env_prefix}{k}"] = str(v)
+        subprocess.run(
+            [sol_file],
+            stdin=open(input_file, "r"),
+            stdout=open(output_file, "w"),
+            stderr=subprocess.DEVNULL,
+            text=True,
+            check=False,
+            env=env,
         )
-        score = res['score']
+        # Score via vis
+        res = subprocess.run(
+            [vis_file, input_file, output_file],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            check=False,
+        )
+        score = -1
+        for line in res.stdout.splitlines():
+            line = line.strip()
+            if line.startswith(score_txt):
+                try:
+                    score = int(line.split("=")[-1].strip())
+                except Exception:
+                    score = -1
+                break
+        # cleanup temporary output
+        try:
+            if os.path.exists(output_file):
+                os.remove(output_file)
+        except Exception:
+            pass
         if score <= 0:
             results.append(-1)
         else:
@@ -121,9 +194,7 @@ def main():
 
     # 設定読み込み
     config = config_util.load_config()
-    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-    relative_work_dir = config["paths"]["relative_work_dir"]
-    work_dir = os.path.abspath(os.path.join(SCRIPT_DIR, relative_work_dir))
+    work_dir = config_util.work_dir()
     optuna_work_dir = os.path.join(work_dir, config["optuna"]["work_dir"])
 
     if not os.path.exists(optuna_work_dir):
@@ -147,29 +218,27 @@ def main():
         build.compile_program(config)
         cpp_file = os.path.join(work_dir, config["files"]["cpp_file"])
         sol_file = os.path.join(work_dir, config["files"]["sol_file"])
-        param_cpp_file = os.path.join(work_dir, config["parameters"]["param_cpp_file"])
-        param_json_file = os.path.join(work_dir, config["parameters"]["param_json_file"])
+        param_json_name = config["parameters"]["param_json_file"]
 
-        if not os.path.isfile(param_json_file):
-            print(f"Error: JSON file not found: {param_json_file}", file=sys.stderr)
-            sys.exit(1)
-        if not os.path.isfile(param_cpp_file):
-            print(f"Error: C++ file not found: {param_cpp_file}", file=sys.stderr)
+        if not os.path.isfile(cpp_file):
+            print(f"Error: C++ file not found: {cpp_file}", file=sys.stderr)
             sys.exit(1)
 
         os.makedirs(study_dir, exist_ok=True)
         print(f"Created a new directory {study_dir}.")
-        shutil.copy(cpp_file, study_dir)
+        cpp_copy = shutil.copy(cpp_file, study_dir)
         shutil.copy(sol_file, study_dir)
-        shutil.copy(param_cpp_file, study_dir)
-        shutil.copy(param_json_file, study_dir)
+
+        # Generate params.json by extracting HP_PARAM macros from the copied cpp
+        params_data = _extract_hp_params_from_cpp(cpp_copy)
+        param_json_file = os.path.join(study_dir, param_json_name)
+        _write_params_json(params_data, param_json_file)
 
     input_dir = os.path.join(work_dir, config["test"]["input_dir"])
     output_dir = study_dir
     sol_file = os.path.join(study_dir, config["files"]["sol_file"])
     vis_file = os.path.join(work_dir, config["files"]["vis_file"])
     score_txt = config["test"]["tester_output_score_txt"]
-    is_interactive = config["problem"]["interactive"]
     param_json_file = os.path.join(study_dir, config["parameters"]["param_json_file"])
 
     # DBファイルパス（SQLite）
@@ -215,7 +284,7 @@ def main():
         n_jobs = -1
 
     study.optimize(
-        lambda trial: objective(trial, input_dir, output_dir, sol_file, vis_file, score_txt, is_interactive, param_json_file, env_prefix=env_prefix),
+        lambda trial: objective(trial, input_dir, output_dir, sol_file, vis_file, score_txt, param_json_file, env_prefix=env_prefix),
         n_trials=n_trials,
         n_jobs=n_jobs,
     )

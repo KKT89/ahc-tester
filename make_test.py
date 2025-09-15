@@ -11,8 +11,7 @@ def main_with_params(L: int, R: int):
 
     config = config_util.load_config()
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-    relative_work_dir = config["paths"]["relative_work_dir"]
-    work_dir = os.path.abspath(os.path.join(SCRIPT_DIR, relative_work_dir))
+    work_dir = config_util.work_dir()
 
     unique_id = uuid.uuid4().hex
     tmp_dir = os.path.join(SCRIPT_DIR, f"tmp_dir_{unique_id}")

@@ -65,11 +65,7 @@ def inline_includes(
 
 def main():
     config = config_util.load_config()
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    work_dir = os.path.abspath(os.path.join(
-        script_dir,
-        config['paths']['relative_work_dir']
-    ))
+    work_dir = config_util.work_dir()
 
     src = os.path.join(work_dir, config['files']['cpp_file'])
     dst = os.path.join(work_dir, config['files']['combined_file'])

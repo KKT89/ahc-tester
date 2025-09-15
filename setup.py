@@ -3,16 +3,15 @@ import subprocess
 import argparse
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 CONFIG_FILE_NAME = "config.toml"
-CONFIG_FILE = os.path.join(SCRIPT_DIR, CONFIG_FILE_NAME)
+CONFIG_FILE = os.path.join(ROOT_DIR, CONFIG_FILE_NAME)
 
 DEFAULT_CONFIG = {
     "paths": {
-        "relative_work_dir": "../", # 作業ディレクトリの相対パス
-        "tools_dir": "tools",       # ツールのディレクトリ
+        "tools_dir": "tools",       # ツールのディレクトリ（プロジェクトルート直下）
     },
     "files": {
-        "config_file": "config.toml",      # 設定ファイルの名前
         "cpp_file": "main.cpp",            # メインのソースファイル
         "combined_file": "combined.cpp",   # 結合後のソースファイル
         "sol_file": "solution",            # コンパイルしたプログラムの名前
@@ -29,8 +28,7 @@ DEFAULT_CONFIG = {
         "tester_output_score_txt": "Score =", # テスターの出力からスコアを取得するための文字列
     },
     "parameters": {
-        "param_json_file": "params.json", # パラメータファイルの名前
-        "param_cpp_file": "params.cpp", # パラメータファイルの名前
+        "param_json_file": "params.json", # 探索空間の JSON（初回 study 作成時に自動生成）
     },
     "optuna": {
         "work_dir": "optuna_work",    # Optuna 用の作業ディレクトリ
@@ -68,8 +66,7 @@ def create_config_file(cfg, config_path):
 
 
 def build_tools_with_cargo(cfg):
-    relative_work_dir = cfg["paths"]["relative_work_dir"]
-    work_dir = os.path.abspath(os.path.join(SCRIPT_DIR, relative_work_dir))
+    work_dir = ROOT_DIR
     tools_dir = cfg["paths"]["tools_dir"]
     tools_path = os.path.join(work_dir, tools_dir)
     cargo_manifest_path = os.path.join(tools_path, "Cargo.toml")
@@ -181,13 +178,8 @@ def main():
     args = parse_args()
     cfg = build_config_from_args(args)
 
-    # 設定ファイルの作成
-    if os.path.exists(CONFIG_FILE):
-        answer = input("config.toml already exists. Overwrite? (y/n): ").strip().lower()
-        if answer == "y":
-            create_config_file(cfg, CONFIG_FILE)
-    else:
-        create_config_file(cfg, CONFIG_FILE)
+    # 設定ファイルの作成（常に上書き）
+    create_config_file(cfg, CONFIG_FILE)
 
     # Cargo を使ってツールをビルド
     build_tools_with_cargo(cfg)

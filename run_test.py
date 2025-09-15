@@ -1,101 +1,43 @@
 import build
-import csv
-import datetime
-import math
 import config_util as config_util
 import subprocess
-import sys
 import time
 import os
-from concurrent.futures import as_completed
-from concurrent.futures import ProcessPoolExecutor
 
-def _load_params_from_json_if_requested(config):
-    """RUNTEST_USE_JSON が設定されている場合、params.json から used=true の値を読み
-    {name: value} の辞書として返す。環境変数用のプレフィックスも返す。
-    """
-    if os.environ.get("RUNTEST_USE_JSON") is None:
-        return None, None
-    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-    relative_work_dir = config["paths"]["relative_work_dir"]
-    work_dir = os.path.abspath(os.path.join(SCRIPT_DIR, relative_work_dir))
-    param_json_file = os.path.join(work_dir, config["parameters"]["param_json_file"])
-    try:
-        import json
-        with open(param_json_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        params = {}
-        for key in ("integer_params", "float_params"):
-            for p in data.get(key, []):
-                if p.get("used"):
-                    name = p.get("name")
-                    value = p.get("value")
-                    if name is not None and value is not None:
-                        params[name] = value
-        env_prefix = os.environ.get("OPTUNA_PARAM_ENV_PREFIX", "HP_")
-        return params, env_prefix
-    except Exception as e:
-        print(f"Warning: failed to load params from {param_json_file}: {e}", file=sys.stderr)
-        return None, None
 
-def run_test_case(case_str, input_file, output_file, solution_file, vis_file, score_txt, is_interactive, params=None, cleanup=False, use_env=False, env_prefix=None):
-    # パラメータの渡し方を選択
-    # - use_env=False: 既存通り CLI 引数で渡す
-    # - use_env=True : 環境変数で渡す（並列でも安全）
-    if use_env:
-        cmd_cpp = [solution_file]
-        env = os.environ.copy()
-        if params:
-            for k, v in params.items():
-                key = f"{env_prefix}{k}" if env_prefix else k
-                env[key] = str(v)
-    else:
-        if params:
-            cmd_cpp = [solution_file] + [str(item) for pair in params.items() for item in pair]
-        else:
-            cmd_cpp = [solution_file]
-        env = None
-    
-    start_time = time.perf_counter()  # 実行前の時刻を取得
+def run_test_case(case_str, input_file, output_file, solution_file, vis_file, score_txt):
+    cmd_cpp = [solution_file]
+
+    start_time = time.perf_counter()
     subprocess.run(
         cmd_cpp,
         stdin=open(input_file, "r"),
         stdout=open(output_file, "w"),
-        stderr=subprocess.DEVNULL,  # stderrは不要なら破棄
+        stderr=subprocess.DEVNULL,
         text=True,
-        env=env,
+        check=False,
     )
-    end_time = time.perf_counter()  # 実行後の時刻を取得
-
-    elapsed_time = end_time - start_time  # 経過時間を計算
-    elapsed_time_ms = elapsed_time * 1000  # ミリ秒に変換
+    elapsed_time_ms = (time.perf_counter() - start_time) * 1000.0
 
     res = subprocess.run(
         [vis_file, input_file, output_file],
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
-        text=True
+        text=True,
+        check=False,
     )
 
     score = -1
     for line in res.stdout.splitlines():
         line = line.strip()
         if line.startswith(score_txt):
-            score = int(line.split("=")[1].strip())
+            try:
+                score = int(line.split("=")[-1].strip())
+            except Exception:
+                score = -1
             break
 
-    # 一時ファイルの削除
-    if cleanup and os.path.isfile(output_file):
-        try:
-            os.remove(output_file)
-        except OSError as e:
-            print(f"Warning: failed to remove {output_file}: {e}", file=sys.stderr)
-
-    return {
-        "case": case_str,
-        "score": score,
-        "elapsed_time": elapsed_time_ms,
-    }
+    return {"case": case_str, "score": score, "elapsed_time": elapsed_time_ms}
 
 
 def main():
@@ -103,14 +45,13 @@ def main():
     config = config_util.load_config()
     build.compile_program(config)
 
-    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-    relative_work_dir = config["paths"]["relative_work_dir"]
-    work_dir = os.path.abspath(os.path.join(SCRIPT_DIR, relative_work_dir))
+    work_dir = config_util.work_dir()
     input_dir = os.path.join(work_dir, config["test"]["input_dir"])
     output_dir = os.path.join(work_dir, config["test"]["output_dir"])
     solution_file = os.path.join(work_dir, config["files"]["sol_file"])
     vis_file = os.path.join(work_dir, config["files"]["vis_file"])
     score_txt = config["test"]["tester_output_score_txt"]
+    # 非インタラクティブ前提の簡易テスト（interactive は参照のみ）
     is_interactive = config["problem"]["interactive"]
 
     os.makedirs(output_dir, exist_ok=True)
@@ -120,85 +61,37 @@ def main():
     wrong_answer_count = 0
     results = []
 
-    params_from_json, env_prefix = _load_params_from_json_if_requested(config)
-
-    use_mp = os.environ.get("RUNTEST_SEQUENTIAL") is None
-    if use_mp:
-        try:
-            with ProcessPoolExecutor(max_workers=None) as executor:
-                futures = []
-                for i in range(testcase_count):
-                    case_str = f"{i:04d}"
-                    input_file = os.path.join(input_dir, case_str + ".txt")
-                    output_file = os.path.join(output_dir, case_str + ".txt")
-                    if not os.path.exists(input_file):
-                        print(f"Error: {input_file} was not found.")
-                        continue
-                    futures.append(executor.submit(
-                        run_test_case,
-                        case_str,
-                        input_file,
-                        output_file,
-                        solution_file,
-                        vis_file,
-                        score_txt,
-                        is_interactive,
-                        params=params_from_json,
-                        use_env=(params_from_json is not None),
-                        env_prefix=env_prefix,
-                    ))
-
-                for future in as_completed(futures):
-                    result = future.result()
-                    score = result['score']
-                    if score <= 0:
-                        wrong_answer_count += 1
-                        print(f"Error: {result['case']} failed to get score.")
-                        continue
-                    results.append(result)
-                    print(f"seed:{result['case']}  score:{result['score']:,d}  ({result['elapsed_time']:.2f} ms)")
-        except Exception as e:
-            print(f"ProcessPool unavailable ({e}); falling back to sequential.")
-            use_mp = False
-
-    if not use_mp:
-        for i in range(testcase_count):
-            case_str = f"{i:04d}"
-            input_file = os.path.join(input_dir, case_str + ".txt")
-            output_file = os.path.join(output_dir, case_str + ".txt")
-            if not os.path.exists(input_file):
-                print(f"Error: {input_file} was not found.")
-                continue
-            result = run_test_case(
-                case_str,
-                input_file,
-                output_file,
-                solution_file,
-                vis_file,
-                score_txt,
-                is_interactive,
-                params=params_from_json,
-                use_env=(params_from_json is not None),
-                env_prefix=env_prefix,
-            )
-            score = result['score']
-            if score <= 0:
-                wrong_answer_count += 1
-                print(f"Error: {result['case']} failed to get score.")
-                continue
-            results.append(result)
-            print(f"seed:{result['case']}  score:{result['score']:,d}  ({result['elapsed_time']:.2f} ms)")
+    # シンプルな逐次実行に限定
+    for i in range(testcase_count):
+        case_str = f"{i:04d}"
+        input_file = os.path.join(input_dir, case_str + ".txt")
+        output_file = os.path.join(output_dir, case_str + ".txt")
+        if not os.path.exists(input_file):
+            print(f"Error: {input_file} was not found.")
+            continue
+        result = run_test_case(
+            case_str,
+            input_file,
+            output_file,
+            solution_file,
+            vis_file,
+            score_txt,
+        )
+        score = result['score']
+        if score <= 0:
+            wrong_answer_count += 1
+            print(f"Error: {result['case']} failed to get score.")
+            continue
+        results.append(result)
+        print(f"seed:{result['case']}  score:{result['score']:,d}  ({result['elapsed_time']:.2f} ms)")
 
     if len(results) == 0:
         print("No results to display.")
         exit(0)
     
-    # スコアの合計を計算
+    # スコアの合計と平均を計算
     total_score = sum(result['score'] for result in results)
-
-    # スコアのlogの合計を計算
-    log_score = sum(math.log(result['score']) for result in results)
-    ave_log_score = log_score / len(results)
+    avg_score = total_score / len(results)
 
     # 最大実行時間を取得
     max_time_result = max(results, key=lambda r: r['elapsed_time'])
@@ -209,27 +102,14 @@ def main():
     print(f"Wrong Answers: {wrong_answer_count} / {testcase_count}")
     print(f"Maximum Execution Time: {max_time:.2f} ms (case: {max_time_case})")
     print(f"Total Score: {total_score:,d}")
-    print(f"Average Log Score: {ave_log_score:.2f}")
+    print(f"Average Score: {avg_score:.2f}")
 
     return {
         "wrong_answers": wrong_answer_count,
         "total_score": total_score,
-        "ave_log_score": ave_log_score,
+        "avg_score": avg_score,
     }
 
 
 if __name__ == "__main__":
-    res = main()
-    wa_count = res["wrong_answers"]
-    total_score = res["total_score"]
-    ave_log_score = res["ave_log_score"]
-
-    now_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    file = 'summary.tsv'
-    write_header = not os.path.exists(file)
-
-    with open(file, "a", newline="") as f:
-        writer = csv.writer(f, delimiter="\t")
-        if write_header:
-            writer.writerow(["Timestamp", "Wrong Answers", "Total Score", "Average Log Score"])
-        writer.writerow([now_time, wa_count, total_score, f"{ave_log_score:.2f}"])
+    main()
