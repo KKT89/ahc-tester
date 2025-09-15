@@ -2,7 +2,7 @@ import build
 import csv
 import datetime
 import math
-import setup
+import config_util as config_util
 import subprocess
 import sys
 import time
@@ -100,7 +100,7 @@ def run_test_case(case_str, input_file, output_file, solution_file, vis_file, sc
 
 def main():
     # コンパイル
-    config = setup.load_config()
+    config = config_util.load_config()
     build.compile_program(config)
 
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))

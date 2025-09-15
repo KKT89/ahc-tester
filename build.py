@@ -1,5 +1,5 @@
 import os
-import setup
+import config_util as config_util
 import subprocess
 import sys
 import json
@@ -54,5 +54,5 @@ def compile_program(config):
 
 
 if __name__ == "__main__":
-    config = setup.load_config()
+    config = config_util.load_config()
     compile_program(config)

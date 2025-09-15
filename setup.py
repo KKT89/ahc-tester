@@ -1,7 +1,6 @@
 import os
 import subprocess
 import argparse
-import tomllib  # Python 3.11+ 標準: 読み込み専用
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE_NAME = "config.toml"
@@ -46,14 +45,7 @@ DEFAULT_CONFIG = {
 }
 
 
-def _toml_load(path):
-    # tomllib はバイナリモードで受け取る
-    with open(path, "rb") as f:
-        return tomllib.load(f)
-
-
 def _toml_dump(data, path):
-    # シンプルな TOML 書き出し（現在の構造に限定して対応）
     lines = []
     for section, values in data.items():
         lines.append(f"[{section}]\n")
@@ -73,14 +65,6 @@ def _toml_dump(data, path):
 def create_config_file(cfg, config_path):
     _toml_dump(cfg, config_path)
     print(f"{config_path} has been overwritten successfully!\n")
-
-
-def load_config():
-    # ./config.toml から設定を読み込む
-    if not os.path.exists(CONFIG_FILE):
-        print(f"Error: {CONFIG_FILE} was not found. Please run setup.py first.")
-        return None
-    return _toml_load(CONFIG_FILE)
 
 
 def build_tools_with_cargo(cfg):

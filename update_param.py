@@ -1,7 +1,7 @@
 import argparse
 import json
 import os
-import setup
+import config_util as config_util
 import sys
 
 def make_cpp(param_json, param_cpp_file):
@@ -94,7 +94,7 @@ def main():
     args = parser.parse_args()
 
     # 設定読み込み
-    config = setup.load_config()
+    config = config_util.load_config()
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
     relative_work_dir = config["paths"]["relative_work_dir"]
     work_dir = os.path.abspath(os.path.join(SCRIPT_DIR, relative_work_dir))

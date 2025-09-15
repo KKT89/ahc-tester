@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-import setup
+import config_util as config_util
 from typing import List, Set
 
 
@@ -64,7 +64,7 @@ def inline_includes(
 
 
 def main():
-    config = setup.load_config()
+    config = config_util.load_config()
     script_dir = os.path.dirname(os.path.abspath(__file__))
     work_dir = os.path.abspath(os.path.join(
         script_dir,
