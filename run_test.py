@@ -5,19 +5,63 @@ import time
 import os
 
 
-def run_test_case(case_str, input_file, output_file, solution_file, vis_file, score_prefix):
+TLE_FACTOR = 2.5
+TLE_MARGIN_RATIO = 0.05  # タイムアウト判定用の緩衝比率（5%余裕）
+
+
+def failure_score(objective: str) -> int:
+    if objective == "maximize":
+        return -1
+    if objective == "minimize":
+        return 10 ** 9
+    raise ValueError(f"Unsupported objective: {objective}")
+
+
+def run_test_case(
+    case_str,
+    input_file,
+    output_file,
+    solution_file,
+    vis_file,
+    score_prefix,
+    fail_score,
+    tle_limit_ms,
+    tle_margin_ratio,
+):
     cmd_cpp = [solution_file]
 
     start_time = time.perf_counter()
-    subprocess.run(
-        cmd_cpp,
-        stdin=open(input_file, "r"),
-        stdout=open(output_file, "w"),
-        stderr=subprocess.DEVNULL,
-        text=True,
-        check=False,
-    )
+    timeout_limit_ms = tle_limit_ms * (1.0 + tle_margin_ratio)
+    timeout_sec = timeout_limit_ms / 1000.0
+    try:
+        with open(input_file, "r") as fin, open(output_file, "w") as fout:
+            subprocess.run(
+                cmd_cpp,
+                stdin=fin,
+                stdout=fout,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                check=False,
+                timeout=timeout_sec,
+            )
+    except subprocess.TimeoutExpired:
+        elapsed_time_ms = (time.perf_counter() - start_time) * 1000.0
+        return {
+            "case": case_str,
+            "score": fail_score,
+            "elapsed_time": elapsed_time_ms,
+            "tle": True,
+        }
+
     elapsed_time_ms = (time.perf_counter() - start_time) * 1000.0
+
+    if elapsed_time_ms > timeout_limit_ms:
+        return {
+            "case": case_str,
+            "score": fail_score,
+            "elapsed_time": elapsed_time_ms,
+            "tle": True,
+        }
 
     res = subprocess.run(
         [vis_file, input_file, output_file],
@@ -27,17 +71,22 @@ def run_test_case(case_str, input_file, output_file, solution_file, vis_file, sc
         check=False,
     )
 
-    score = -1
+    score = fail_score
     for line in res.stdout.splitlines():
         line = line.strip()
         if line.startswith(score_prefix):
             try:
                 score = int(line.split("=")[-1].strip())
             except Exception:
-                score = -1
+                score = fail_score
             break
 
-    return {"case": case_str, "score": score, "elapsed_time": elapsed_time_ms}
+    return {
+        "case": case_str,
+        "score": score,
+        "elapsed_time": elapsed_time_ms,
+        "tle": False,
+    }
 
 
 def main():
@@ -51,6 +100,9 @@ def main():
     solution_file = os.path.join(work_dir, config["files"]["sol_file"])
     vis_file = os.path.join(work_dir, config["files"]["vis_file"])
     score_prefix = config["problem"]["score_prefix"]
+    objective = config["problem"]["objective"]
+    fail_score = failure_score(objective)
+    tle_limit_ms = config["problem"]["time_limit_ms"] * TLE_FACTOR
     # 非インタラクティブ前提の簡易テスト（interactive は参照のみ）
     is_interactive = config["problem"]["interactive"]
 
@@ -76,9 +128,18 @@ def main():
             solution_file,
             vis_file,
             score_prefix,
+            fail_score,
+            tle_limit_ms,
+            TLE_MARGIN_RATIO,
         )
         score = result['score']
-        if score <= 0:
+        if result['tle']:
+            wrong_answer_count += 1
+            print(
+                f"Error: {result['case']} exceeded TL ({result['elapsed_time']:.2f} ms > {(tle_limit_ms * (1.0 + TLE_MARGIN_RATIO)):.2f} ms)."
+            )
+            continue
+        if score == fail_score:
             wrong_answer_count += 1
             print(f"Error: {result['case']} failed to get score.")
             continue
