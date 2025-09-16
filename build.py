@@ -12,8 +12,8 @@ def compile_program(config):
         print(f"Error: {cpp_file_path} was not found.")
         sys.exit(1)
 
-    COMPILE_OPTIONS = config["build"]["compile_options"]
-    cmd = ["g++", cpp_file_path, COMPILE_OPTIONS]
+    cmd = ["g++", cpp_file_path]
+    cmd += ["-O2"] # コンパイルオプション
     cmd += ["-o", sol_file_path]
     print(f"Building: {config['files']['cpp_file']} -> {config['files']['sol_file']}")
 

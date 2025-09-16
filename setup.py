@@ -9,36 +9,27 @@ CONFIG_FILE = os.path.join(ROOT_DIR, CONFIG_FILE_NAME)
 
 DEFAULT_CONFIG = {
     "paths": {
-        "tools_dir": "tools",       # ツールのディレクトリ（プロジェクトルート直下）
+        "tools_dir": "tools",                               # ツールのディレクトリ
+        "testcase_input_dir": "in",                         # テストケースの入力ファイルがあるディレクトリ
+        "testcase_output_dir": "out",                       # テストケースの出力ファイルを保存するディレクトリ
+        "optuna_work_dir": "optuna_work",                   # Optuna 用の作業ディレクトリ
     },
     "files": {
-        "cpp_file": "main.cpp",            # メインのソースファイル
-        "combined_file": "combined.cpp",   # 結合後のソースファイル
-        "sol_file": "solution",            # コンパイルしたプログラムの名前
-        "gen_file": "gen",                 # テストケース生成プログラムの名前
-        "vis_file": "vis",                 # ビジュアライズプログラムの名前
-        "tester_file": "tester",           # テスタープログラムの名前
-    },
-    "build": {
-        "compile_options": "-O2", # コンパイルオプション
-    },
-    "test": {
-        "input_dir": "in",                    # テストケースの入力ファイルがあるディレクトリ
-        "output_dir": "out",                  # テストケースの出力ファイルを保存するディレクトリ
-        "tester_output_score_txt": "Score =", # テスターの出力からスコアを取得するための文字列
-    },
-    "parameters": {
-        "param_json_file": "params.json", # 探索空間の JSON（初回 study 作成時に自動生成）
-    },
-    "optuna": {
-        "work_dir": "optuna_work",    # Optuna 用の作業ディレクトリ
-        "db_name": "optuna_study.db", # Optuna 用のデータベースファイル
+        "cpp_file": "main.cpp",                             # メインのソースファイル
+        "combined_file": "combined.cpp",                    # 結合後のソースファイル
+        "sol_file": "solution",                             # コンパイルしたプログラムの名前
+        "gen_file": "gen",                                  # テストケース生成プログラムの名前
+        "vis_file": "vis",                                  # ビジュアライズプログラムの名前
+        "tester_file": "tester",                            # テスタープログラムの名前
+        "optuna_db_file": "optuna_study.db",                # Optuna 用のデータベースファイル
+        "optuna_params_file": "params.json",                # Optuna 用パラメータ定義ファイル
     },
     "problem": {
-        "pretest_count": 150,    # プレテストの数（CLIからは変更不可）
-        "time_limit_ms": 2000,   # タイムリミット（ミリ秒）。CLI は秒入力、保存は ms。
-        "interactive": False,    # インタラクティブかどうか
-        "objective": "maximize", # 最大化 or 最小化
+        "pretest_count": 150,                               # プレテストの数
+        "time_limit_ms": 2000,                              # タイムリミット（ミリ秒）。CLI は秒入力、保存は ms。
+        "interactive": False,                               # インタラクティブかどうか
+        "objective": "maximize",                            # 最大化 or 最小化
+        "score_prefix": "Score =",                          # テスターの出力からスコアを取得するためのプレフィックス
     },
 }
 

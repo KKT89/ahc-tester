@@ -91,7 +91,7 @@ def _write_params_json(data: dict, path: str) -> None:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def objective(trial, input_dir, output_dir, sol_file, vis_file, score_txt, param_json_file, env_prefix: str = "HP_"):
+def objective(trial, input_dir, output_dir, sol_file, vis_file, score_prefix, param_json_file, env_prefix: str = "HP_"):
     params = suggest_parameters(trial, param_json_file)
 
     # 固定順序（Prunerの影響を安定化）: 環境変数 OPTUNA_OBJECTIVE_SEED で制御
@@ -142,7 +142,7 @@ def objective(trial, input_dir, output_dir, sol_file, vis_file, score_txt, param
         score = -1
         for line in res.stdout.splitlines():
             line = line.strip()
-            if line.startswith(score_txt):
+            if line.startswith(score_prefix):
                 try:
                     score = int(line.split("=")[-1].strip())
                 except Exception:
@@ -195,7 +195,7 @@ def main():
     # 設定読み込み
     config = config_util.load_config()
     work_dir = config_util.work_dir()
-    optuna_work_dir = os.path.join(work_dir, config["optuna"]["work_dir"])
+    optuna_work_dir = os.path.join(work_dir, config["paths"]["optuna_work_dir"])
 
     if not os.path.exists(optuna_work_dir):
         os.makedirs(optuna_work_dir, exist_ok=True)
@@ -218,7 +218,7 @@ def main():
         build.compile_program(config)
         cpp_file = os.path.join(work_dir, config["files"]["cpp_file"])
         sol_file = os.path.join(work_dir, config["files"]["sol_file"])
-        param_json_name = config["parameters"]["param_json_file"]
+        param_json_name = config["files"]["optuna_params_file"]
 
         if not os.path.isfile(cpp_file):
             print(f"Error: C++ file not found: {cpp_file}", file=sys.stderr)
@@ -234,15 +234,16 @@ def main():
         param_json_file = os.path.join(study_dir, param_json_name)
         _write_params_json(params_data, param_json_file)
 
-    input_dir = os.path.join(work_dir, config["test"]["input_dir"])
+    input_dir = os.path.join(work_dir, config["paths"]["testcase_input_dir"])
     output_dir = study_dir
     sol_file = os.path.join(study_dir, config["files"]["sol_file"])
     vis_file = os.path.join(work_dir, config["files"]["vis_file"])
-    score_txt = config["test"]["tester_output_score_txt"]
-    param_json_file = os.path.join(study_dir, config["parameters"]["param_json_file"])
+    score_prefix = config["problem"]["score_prefix"]
+    param_json_file = os.path.join(study_dir, config["files"]["optuna_params_file"])
 
     # DBファイルパス（SQLite）
-    db_path = os.path.join(study_dir, config["optuna"]["db_name"])
+    optuna_db_file = config["files"]["optuna_db_file"]
+    db_path = os.path.join(study_dir, optuna_db_file)
     db_url = f"sqlite:///{db_path}?cache=shared&mode=wal"
 
     # WilcoxonPruner の設定
@@ -261,7 +262,7 @@ def main():
 
     # Optuna study の作成
     study = optuna.create_study(
-        study_name=config["optuna"]["db_name"],
+        study_name=optuna_db_file,
         storage=storage,
         load_if_exists=True,
         direction=config["problem"]["objective"],
@@ -284,7 +285,7 @@ def main():
         n_jobs = -1
 
     study.optimize(
-        lambda trial: objective(trial, input_dir, output_dir, sol_file, vis_file, score_txt, param_json_file, env_prefix=env_prefix),
+        lambda trial: objective(trial, input_dir, output_dir, sol_file, vis_file, score_prefix, param_json_file, env_prefix=env_prefix),
         n_trials=n_trials,
         n_jobs=n_jobs,
     )
@@ -310,7 +311,7 @@ def main():
     print(f"[Done] Updated {param_json_file} with best params: {best}")
 
     # ルート側
-    root_param_json = os.path.join(work_dir, config["parameters"]["param_json_file"])
+    root_param_json = os.path.join(work_dir, config["files"]["optuna_params_file"])
     if os.path.isfile(root_param_json):
         _apply_best_to_json(root_param_json)
         print(f"[Done] Also updated {root_param_json} with best params.")

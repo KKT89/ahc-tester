@@ -5,7 +5,7 @@ import time
 import os
 
 
-def run_test_case(case_str, input_file, output_file, solution_file, vis_file, score_txt):
+def run_test_case(case_str, input_file, output_file, solution_file, vis_file, score_prefix):
     cmd_cpp = [solution_file]
 
     start_time = time.perf_counter()
@@ -30,7 +30,7 @@ def run_test_case(case_str, input_file, output_file, solution_file, vis_file, sc
     score = -1
     for line in res.stdout.splitlines():
         line = line.strip()
-        if line.startswith(score_txt):
+        if line.startswith(score_prefix):
             try:
                 score = int(line.split("=")[-1].strip())
             except Exception:
@@ -46,11 +46,11 @@ def main():
     build.compile_program(config)
 
     work_dir = config_util.work_dir()
-    input_dir = os.path.join(work_dir, config["test"]["input_dir"])
-    output_dir = os.path.join(work_dir, config["test"]["output_dir"])
+    input_dir = os.path.join(work_dir, config["paths"]["testcase_input_dir"])
+    output_dir = os.path.join(work_dir, config["paths"]["testcase_output_dir"])
     solution_file = os.path.join(work_dir, config["files"]["sol_file"])
     vis_file = os.path.join(work_dir, config["files"]["vis_file"])
-    score_txt = config["test"]["tester_output_score_txt"]
+    score_prefix = config["problem"]["score_prefix"]
     # 非インタラクティブ前提の簡易テスト（interactive は参照のみ）
     is_interactive = config["problem"]["interactive"]
 
@@ -75,7 +75,7 @@ def main():
             output_file,
             solution_file,
             vis_file,
-            score_txt,
+            score_prefix,
         )
         score = result['score']
         if score <= 0:

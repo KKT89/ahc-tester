@@ -25,7 +25,7 @@ def main_with_params(L: int, R: int):
     cmd = [gen, tmp_file, f"--dir={tmp_dir}"]
     subprocess.run(cmd, check=True, cwd=SCRIPT_DIR)
 
-    in_dir = os.path.join(work_dir, config["test"]["input_dir"])
+    in_dir = os.path.join(work_dir, config["paths"]["testcase_input_dir"])
     os.makedirs(in_dir, exist_ok=True)
     total_cases = R - L
     for i in range(total_cases):
